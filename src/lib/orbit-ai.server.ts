@@ -64,10 +64,10 @@ Return JSON shaped exactly:
 {"palette":[{"name":"string","hex":"#RRGGBB"}] (4-5 entries),"vibe_keywords":["string"] (5 short lowercase words),"positioning":"one sentence positioning line","tone":"short tone descriptor"}`,
   );
   return {
-    palette: Array.isArray(json.palette) ? (json.palette as BrandAnalysis["palette"]).slice(0, 6) : [],
-    vibe_keywords: Array.isArray(json.vibe_keywords) ? (json.vibe_keywords as string[]).slice(0, 8) : [],
-    positioning: String(json.positioning ?? ""),
-    tone: String(json.tone ?? input.tone ?? ""),
+    palette: Array.isArray(json['palette']) ? (json['palette'] as BrandAnalysis["palette"]).slice(0, 6) : [],
+    vibe_keywords: Array.isArray(json['vibe_keywords']) ? (json['vibe_keywords'] as string[]).slice(0, 8) : [],
+    positioning: String(json['positioning'] ?? ""),
+    tone: String(json['tone'] ?? input.tone ?? ""),
   };
 }
 
@@ -98,11 +98,11 @@ Return JSON shaped exactly:
 {"title":"short internal title","hook":"first 3 seconds of spoken/on-screen hook","script":"beat-by-beat script with timecodes, newline separated","caption":"platform caption","hashtags":["tag"] (5-8, no # symbol)}`,
   );
   return {
-    title: String(json.title ?? input.brief.slice(0, 60)),
-    hook: String(json.hook ?? ""),
-    script: String(json.script ?? ""),
-    caption: String(json.caption ?? ""),
-    hashtags: Array.isArray(json.hashtags) ? (json.hashtags as string[]).slice(0, 10) : [],
+    title: String(json['title'] ?? input.brief.slice(0, 60)),
+    hook: String(json['hook'] ?? ""),
+    script: String(json['script'] ?? ""),
+    caption: String(json['caption'] ?? ""),
+    hashtags: Array.isArray(json['hashtags']) ? (json['hashtags'] as string[]).slice(0, 10) : [],
   };
 }
 
@@ -133,13 +133,13 @@ Inbound message: ${input.message}
 Return JSON shaped exactly:
 {"tier":"high|medium|low","score":0-100,"reason":"one line why","intent_summary":"short intent summary","reply":"the auto-reply message to send now"}`,
   );
-  const tier = String(json.tier ?? "medium").toLowerCase();
-  const score = Number(json.score ?? 50);
+  const tier = String(json['tier'] ?? "medium").toLowerCase();
+  const score = Number(json['score'] ?? 50);
   return {
     tier: tier === "high" || tier === "low" ? tier : "medium",
     score: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 50,
-    reason: String(json.reason ?? ""),
-    intent_summary: String(json.intent_summary ?? input.message.slice(0, 90)),
-    reply: String(json.reply ?? ""),
+    reason: String(json['reason'] ?? ""),
+    intent_summary: String(json['intent_summary'] ?? input.message.slice(0, 90)),
+    reply: String(json['reply'] ?? ""),
   };
 }
