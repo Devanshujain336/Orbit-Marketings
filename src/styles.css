@@ -204,3 +204,50 @@
     animation: orbit-sweep 3.4s linear infinite;
   }
 }
+
+@keyframes orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-spin-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes orbit-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.86 0.22 122 / 0.28);
+  }
+  50% {
+    box-shadow: 0 0 34px 6px oklch(0.86 0.22 122 / 0.16);
+  }
+}
+
+.orbit-path {
+  border: 1px dashed oklch(1 0 0 / 0.12);
+}
+
+.orbit-rotate {
+  animation: orbit-spin 30s linear infinite;
+}
+
+.orbit-counter {
+  animation: orbit-spin-reverse 30s linear infinite;
+}
+
+.orbit-pulse {
+  animation: orbit-breathe 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-rotate,
+  .orbit-counter,
+  .orbit-pulse {
+    animation: none;
+  }
+}
+

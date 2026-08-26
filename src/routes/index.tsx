@@ -18,6 +18,7 @@ import {
 } from "@/components/orbit/workspace-pages";
 import { Button } from "@/components/ui/button";
 import { Chip, Panel, SpeedLine, StatTile, TierBadge } from "@/components/orbit/primitives";
+import { OrbitSystem } from "@/components/orbit/orbit-system";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,6 +45,29 @@ const engine = [
   { icon: Sparkles, title: "Create", text: "AI video concepts or offline production with VasuDev MarketX." },
   { icon: CalendarClock, title: "Distribute", text: "Schedule Instagram and Facebook posts with boost budgets." },
   { icon: Inbox, title: "Qualify", text: "Auto-reply to DMs and sort leads into high, medium, and low value." },
+] as const;
+
+const plainSteps = [
+  {
+    title: "Tell us about your business once",
+    you: "You paste your website and answer a few short questions.",
+    orbit: "reads your brand, colours, tone and audience, then writes it down as a profile every other step reuses.",
+  },
+  {
+    title: "Get videos without hiring anyone",
+    you: "You pick AI-made videos, a real shoot, or both.",
+    orbit: "drafts hooks, scripts and captions from proven viral patterns — or books filming and editing with VasuDev MarketX.",
+  },
+  {
+    title: "Reach people who don't know you yet",
+    you: "You choose a date and a small ad budget.",
+    orbit: "schedules and boosts the videos on Instagram and Facebook so new people land in your DMs.",
+  },
+  {
+    title: "Only spend your time on real buyers",
+    you: "You open one short list each morning.",
+    orbit: "replies to every DM in seconds, asks the qualifying questions, and marks each person high, medium or low value.",
+  },
 ] as const;
 
 function Index() {
@@ -85,10 +109,57 @@ function Index() {
               </div>
             </div>
 
-            <div className="panel sweep overflow-hidden">
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-0 -z-10 rounded-full bg-signal/10 blur-3xl" />
+              <OrbitSystem />
+              <p className="mt-4 text-center text-sm text-muted-foreground">
+                Everything a startup needs to get seen and sell — running in one loop, around the clock.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-[1100px] px-5 py-16 text-center">
+        <p className="label-xs">In plain English</p>
+        <h2 className="mt-3 text-4xl font-semibold md:text-5xl">You post nothing. You chase nobody. You only talk to real buyers.</h2>
+        <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
+          Today a founder hires a video person, an editor, an ads person, and still answers DMs at midnight. Orbit does all four
+          jobs in one place: it makes the videos, runs the ads, answers every message instantly, and tells you which people are
+          actually worth your time.
+        </p>
+        <div className="mt-10 grid gap-4 text-left md:grid-cols-2">
+          {plainSteps.map((step, index) => (
+            <Panel key={step.title} className="relative overflow-hidden">
+              <div className="absolute inset-x-0 top-0 h-px speed-line opacity-60" />
+              <div className="flex items-start gap-4">
+                <span className="num grid size-9 shrink-0 place-items-center rounded-full border border-signal/40 text-sm text-signal">
+                  {index + 1}
+                </span>
+                <div>
+                  <h3 className="text-xl font-semibold">{step.title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{step.you}</p>
+                  <p className="mt-2 text-sm">
+                    <span className="label-xs mr-2">Orbit does</span>
+                    {step.orbit}
+                  </p>
+                </div>
+              </div>
+            </Panel>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-[1500px] px-5 pb-16">
+        <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+          <div>
+            <p className="label-xs">Full software, not a brochure</p>
+            <h2 className="mt-3 text-4xl font-semibold">The operating system behind the marketing loop.</h2>
+            <p className="mt-4 text-muted-foreground">Each surface is already in the workspace: onboarding, pipeline, scheduling, lead inbox and settings. The homepage describes Orbit; the cockpit runs it.</p>
+            <div className="panel sweep mt-6 overflow-hidden">
               <div className="border-b border-border p-4">
                 <p className="label-xs">Orbit lead cockpit</p>
-                <h2 className="mt-1 text-2xl font-semibold">Instant replies. Founder time protected.</h2>
+                <h3 className="mt-1 text-2xl font-semibold">Instant replies. Founder time protected.</h3>
               </div>
               <div className="space-y-4 p-4">
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -111,17 +182,7 @@ function Index() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-[1500px] px-5 py-16">
-        <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-          <div>
-            <p className="label-xs">Full software, not a brochure</p>
-            <h2 className="mt-3 text-4xl font-semibold">The operating system behind the marketing loop.</h2>
-            <p className="mt-4 text-muted-foreground">Each surface is already in the workspace: onboarding, pipeline, scheduling, lead inbox and settings. The homepage describes Orbit; the cockpit runs it.</p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid auto-rows-min gap-3 md:grid-cols-2">
             {engine.map((item, index) => (
               <Panel key={item.title} className="relative overflow-hidden">
                 <div className="absolute inset-x-0 top-0 h-px speed-line opacity-60" />
@@ -134,6 +195,7 @@ function Index() {
           </div>
         </div>
       </section>
+
 
       <section className="border-y border-border bg-asphalt">
         <div className="mx-auto grid max-w-[1500px] gap-6 px-5 py-16 lg:grid-cols-3">
