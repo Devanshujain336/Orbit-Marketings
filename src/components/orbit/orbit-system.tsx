@@ -47,7 +47,7 @@ function Ring({
               className="orbit-counter -translate-x-1/2 -translate-y-1/2"
               style={{ animationDuration: duration }}
             >
-              <div className="flex w-[132px] flex-col items-center gap-1.5 text-center">
+              <div className="flex w-[116px] flex-col items-center gap-1.5 text-center">
                 <span className="grid size-11 place-items-center rounded-full border border-signal/40 bg-card text-signal shadow-glow">
                   <node.icon className="size-5" />
                 </span>
@@ -66,17 +66,17 @@ export function OrbitSystem({ className }: { className?: string }) {
   return (
     <div className={cn("relative mx-auto aspect-square w-full max-w-[520px]", className)}>
       <div className="orbit-path absolute inset-[22%] rounded-full" />
-      <div className="orbit-path absolute inset-[2%] rounded-full" />
+      <div className="orbit-path absolute inset-[9%] rounded-full" />
 
       <div className="absolute inset-[22%]">
-        <Ring nodes={innerNodes} radius={110} duration="26s" />
+        <Ring nodes={innerNodes} radius={98} duration="26s" />
       </div>
-      <div className="absolute inset-[2%]">
-        <Ring nodes={outerNodes} radius={190} duration="42s" />
+      <div className="absolute inset-[9%]">
+        <Ring nodes={outerNodes} radius={168} duration="42s" />
       </div>
 
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <div className="orbit-pulse grid size-28 place-items-center rounded-full border border-signal/50 bg-card text-center">
+        <div className="orbit-pulse grid size-24 place-items-center rounded-full border border-signal/50 bg-card text-center">
           <div>
             <Radio className="mx-auto size-5 text-signal" />
             <p className="font-display text-base font-bold leading-none">ORBIT</p>
