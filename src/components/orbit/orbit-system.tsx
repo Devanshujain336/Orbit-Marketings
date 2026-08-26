@@ -32,7 +32,7 @@ function Ring({
 }) {
   return (
     <div
-      className={cn("orbit-rotate absolute inset-0", className)}
+      className={cn("orbit-rotate absolute inset-0 z-10", className)}
       style={{ animationDuration: duration }}
     >
       {nodes.map((node, index) => {
@@ -65,11 +65,11 @@ function Ring({
 export function OrbitSystem({ className }: { className?: string }) {
   return (
     <div className={cn("relative mx-auto aspect-square w-full max-w-[560px] px-2", className)}>
-      <div className="orbit-path absolute inset-[24%] rounded-full" />
+      <div className="orbit-path absolute inset-[18%] rounded-full" />
       <div className="orbit-path absolute inset-0 rounded-full" />
 
-      <div className="absolute inset-[24%]">
-        <Ring nodes={innerNodes} radius={118} duration="26s" />
+      <div className="absolute inset-[18%]">
+        <Ring nodes={innerNodes} radius={148} duration="26s" />
       </div>
       <div className="absolute inset-0">
         <Ring nodes={outerNodes} radius={206} duration="42s" />
