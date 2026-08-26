@@ -182,7 +182,7 @@ function Index() {
               </div>
             </div>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid auto-rows-min gap-3 md:grid-cols-2">
             {engine.map((item, index) => (
               <Panel key={item.title} className="relative overflow-hidden">
                 <div className="absolute inset-x-0 top-0 h-px speed-line opacity-60" />
