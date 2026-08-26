@@ -18,6 +18,7 @@ import {
 } from "@/components/orbit/workspace-pages";
 import { Button } from "@/components/ui/button";
 import { Chip, Panel, SpeedLine, StatTile, TierBadge } from "@/components/orbit/primitives";
+import { OrbitSystem } from "@/components/orbit/orbit-system";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,6 +45,29 @@ const engine = [
   { icon: Sparkles, title: "Create", text: "AI video concepts or offline production with VasuDev MarketX." },
   { icon: CalendarClock, title: "Distribute", text: "Schedule Instagram and Facebook posts with boost budgets." },
   { icon: Inbox, title: "Qualify", text: "Auto-reply to DMs and sort leads into high, medium, and low value." },
+] as const;
+
+const plainSteps = [
+  {
+    title: "Tell us about your business once",
+    you: "You paste your website and answer a few short questions.",
+    orbit: "reads your brand, colours, tone and audience, then writes it down as a profile every other step reuses.",
+  },
+  {
+    title: "Get videos without hiring anyone",
+    you: "You pick AI-made videos, a real shoot, or both.",
+    orbit: "drafts hooks, scripts and captions from proven viral patterns — or books filming and editing with VasuDev MarketX.",
+  },
+  {
+    title: "Reach people who don't know you yet",
+    you: "You choose a date and a small ad budget.",
+    orbit: "schedules and boosts the videos on Instagram and Facebook so new people land in your DMs.",
+  },
+  {
+    title: "Only spend your time on real buyers",
+    you: "You open one short list each morning.",
+    orbit: "replies to every DM in seconds, asks the qualifying questions, and marks each person high, medium or low value.",
+  },
 ] as const;
 
 function Index() {
