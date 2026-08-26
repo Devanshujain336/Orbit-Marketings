@@ -240,7 +240,7 @@ function LeadThread({ lead }: { lead: Lead | undefined }) {
   );
 }
 
-function BusinessSummary({ business }: { business?: Business | null }) {
+function BusinessSummary({ business }: { business?: Business | null | undefined }) {
   const vibe = business?.vibe_keywords ?? [];
   return (
     <Panel title="Brand telemetry">
