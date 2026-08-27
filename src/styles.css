@@ -56,8 +56,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-display: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Barlow", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --shadow-telemetry: 0 0 0 1px var(--border), 0 24px 60px -30px oklch(0 0 0 / 0.9);
   --shadow-glow: 0 0 32px -6px oklch(0.86 0.22 122 / 0.45);
@@ -138,7 +138,56 @@
   h3,
   h4 {
     font-family: var(--font-display);
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
+  }
+}
+
+.marketing-theme {
+  --background: oklch(0.99 0.035 106);
+  --foreground: oklch(0.22 0 0);
+  --card: oklch(0.9 0.09 315);
+  --card-foreground: oklch(0.22 0 0);
+  --popover: oklch(0.99 0.035 106);
+  --popover-foreground: oklch(0.22 0 0);
+  --primary: oklch(0.69 0.2 35);
+  --primary-foreground: oklch(0.99 0.035 106);
+  --signal: oklch(0.69 0.2 35);
+  --signal-foreground: oklch(0.99 0.035 106);
+  --heat: oklch(0.78 0.17 65);
+  --heat-foreground: oklch(0.22 0 0);
+  --secondary: oklch(0.9 0.09 315);
+  --secondary-foreground: oklch(0.22 0 0);
+  --muted: oklch(0.96 0.04 105);
+  --muted-foreground: oklch(0.47 0.025 35);
+  --accent: oklch(0.78 0.17 65);
+  --accent-foreground: oklch(0.22 0 0);
+  --border: oklch(0.22 0 0 / 12%);
+  --input: oklch(0.22 0 0 / 15%);
+  --ring: oklch(0.69 0.2 35 / 55%);
+  color-scheme: light;
+}
+
+@keyframes marketing-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -8px, 0); }
+}
+
+@keyframes marketing-dash {
+  to { stroke-dashoffset: -80; }
+}
+
+.marketing-float {
+  animation: marketing-float 5s ease-in-out infinite;
+}
+
+.marketing-dash {
+  animation: marketing-dash 12s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-float,
+  .marketing-dash {
+    animation: none;
   }
 }
 
