@@ -56,65 +56,87 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "EB Garamond", Georgia, serif;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --shadow-telemetry: 0 0 0 1px var(--border), 0 24px 60px -30px oklch(0 0 0 / 0.9);
   --shadow-glow: 0 0 32px -6px oklch(0.86 0.22 122 / 0.45);
 }
 
 :root {
-  --radius: 0.35rem;
+  /* Wispr Flow — Cream Ivory + Coral Pulse + Deep Charcoal */
+  --radius: 0.5rem;
 
-  --background: oklch(0.15 0.008 260);
-  --foreground: oklch(0.96 0.005 250);
-  --asphalt: oklch(0.19 0.01 260);
-  --carbon: oklch(0.23 0.012 260);
+  /* Core surfaces */
+  --background:  oklch(0.99 0.025 102);   /* Cream Ivory #FFFFEB */
+  --foreground:  oklch(0.17 0.005 270);   /* Deep Charcoal #1A1A1A */
+  --asphalt:     oklch(0.97 0.015 102);   /* slightly deeper cream for subtle zones */
+  --carbon:      oklch(0.95 0.018 102);   /* deeper still, for grid/dividers */
 
-  --card: oklch(0.196 0.011 260);
-  --card-foreground: oklch(0.96 0.005 250);
-  --popover: oklch(0.21 0.012 260);
-  --popover-foreground: oklch(0.96 0.005 250);
+  /* Cards — pure clean white so they lift off the cream page */
+  --card:            oklch(1 0 0);
+  --card-foreground: oklch(0.17 0.005 270);
 
-  --primary: oklch(0.86 0.22 122);
-  --primary-foreground: oklch(0.17 0.03 130);
-  --signal: oklch(0.86 0.22 122);
-  --signal-foreground: oklch(0.17 0.03 130);
-  --heat: oklch(0.79 0.17 62);
-  --heat-foreground: oklch(0.19 0.03 60);
-  --cool: oklch(0.72 0.13 232);
+  /* Popovers */
+  --popover:            oklch(1 0 0);
+  --popover-foreground: oklch(0.17 0.005 270);
 
-  --secondary: oklch(0.26 0.013 260);
-  --secondary-foreground: oklch(0.95 0.005 250);
-  --muted: oklch(0.24 0.012 260);
-  --muted-foreground: oklch(0.68 0.015 258);
-  --accent: oklch(0.28 0.016 260);
-  --accent-foreground: oklch(0.97 0.005 250);
-  --destructive: oklch(0.63 0.21 22);
-  --destructive-foreground: oklch(0.98 0.005 250);
+  /* Primary = Coral Pulse #FF6C4C */
+  --primary:            oklch(0.66 0.19 31);
+  --primary-foreground: oklch(1 0 0);
 
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.86 0.22 122 / 60%);
+  /* Signal = same coral (hot lead, CTA) */
+  --signal:            oklch(0.66 0.19 31);
+  --signal-foreground: oklch(1 0 0);
 
-  --chart-1: oklch(0.86 0.22 122);
-  --chart-2: oklch(0.79 0.17 62);
-  --chart-3: oklch(0.72 0.13 232);
-  --chart-4: oklch(0.63 0.21 22);
-  --chart-5: oklch(0.68 0.015 258);
+  /* Heat = warm amber (boost, schedule) */
+  --heat:            oklch(0.76 0.14 58);
+  --heat-foreground: oklch(0.17 0.005 270);
 
-  --sidebar: oklch(0.17 0.009 260);
-  --sidebar-foreground: oklch(0.92 0.005 250);
-  --sidebar-primary: oklch(0.86 0.22 122);
-  --sidebar-primary-foreground: oklch(0.17 0.03 130);
-  --sidebar-accent: oklch(0.24 0.014 260);
-  --sidebar-accent-foreground: oklch(0.97 0.005 250);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.86 0.22 122 / 60%);
+  /* Cool = muted periwinkle (informational) */
+  --cool: oklch(0.68 0.12 258);
+
+  /* Secondary — soft warm neutral (replaces the jarring lavender-pink) */
+  --secondary:            oklch(0.96 0.012 102);
+  --secondary-foreground: oklch(0.17 0.005 270);
+
+  /* Muted */
+  --muted:            oklch(0.96 0.012 102);
+  --muted-foreground: oklch(0.48 0.025 35);
+
+  /* Accent — very light coral wash for hover states */
+  --accent:            oklch(0.96 0.04 31);
+  --accent-foreground: oklch(0.35 0.1 31);
+
+  /* Destructive */
+  --destructive:            oklch(0.58 0.22 22);
+  --destructive-foreground: oklch(1 0 0);
+
+  /* Borders & inputs */
+  --border: oklch(0.17 0 0 / 10%);
+  --input:  oklch(0.17 0 0 / 12%);
+  --ring:   oklch(0.66 0.19 31 / 50%);
+
+  /* Charts */
+  --chart-1: oklch(0.66 0.19 31);
+  --chart-2: oklch(0.76 0.14 58);
+  --chart-3: oklch(0.68 0.12 258);
+  --chart-4: oklch(0.58 0.22 22);
+  --chart-5: oklch(0.62 0.08 185);
+
+  /* Sidebar — just a hair darker than the page cream */
+  --sidebar:                    oklch(0.97 0.02 102);
+  --sidebar-foreground:         oklch(0.17 0.005 270);
+  --sidebar-primary:            oklch(0.66 0.19 31);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent:             oklch(0.94 0.03 31);
+  --sidebar-accent-foreground:  oklch(0.35 0.1 31);
+  --sidebar-border:             oklch(0.17 0 0 / 8%);
+  --sidebar-ring:               oklch(0.66 0.19 31 / 50%);
 }
 
 .dark {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 @layer base {
@@ -123,7 +145,7 @@
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
@@ -142,30 +164,7 @@
   }
 }
 
-.marketing-theme {
-  --background: oklch(0.99 0.035 106);
-  --foreground: oklch(0.22 0 0);
-  --card: oklch(0.9 0.09 315);
-  --card-foreground: oklch(0.22 0 0);
-  --popover: oklch(0.99 0.035 106);
-  --popover-foreground: oklch(0.22 0 0);
-  --primary: oklch(0.69 0.2 35);
-  --primary-foreground: oklch(0.99 0.035 106);
-  --signal: oklch(0.69 0.2 35);
-  --signal-foreground: oklch(0.99 0.035 106);
-  --heat: oklch(0.78 0.17 65);
-  --heat-foreground: oklch(0.22 0 0);
-  --secondary: oklch(0.9 0.09 315);
-  --secondary-foreground: oklch(0.22 0 0);
-  --muted: oklch(0.96 0.04 105);
-  --muted-foreground: oklch(0.47 0.025 35);
-  --accent: oklch(0.78 0.17 65);
-  --accent-foreground: oklch(0.22 0 0);
-  --border: oklch(0.22 0 0 / 12%);
-  --input: oklch(0.22 0 0 / 15%);
-  --ring: oklch(0.69 0.2 35 / 55%);
-  color-scheme: light;
-}
+
 
 @keyframes marketing-float {
   0%, 100% { transform: translate3d(0, 0, 0); }
@@ -208,8 +207,8 @@
 
 @utility grid-asphalt {
   background-image:
-    linear-gradient(to right, oklch(1 0 0 / 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(1 0 0 / 0.035) 1px, transparent 1px);
+    linear-gradient(to right, oklch(0.17 0 0 / 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.17 0 0 / 0.04) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
@@ -227,6 +226,16 @@
   background-color: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  box-shadow: 0 1px 2px 0 oklch(0.17 0 0 / 0.05);
+}
+
+@utility panel-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.panel-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -8px oklch(0.17 0 0 / 0.12);
 }
 
 @keyframes orbit-sweep {
@@ -299,4 +308,32 @@
     animation: none;
   }
 }
+
+/* ─── Orbit System — elliptical diagram ────────────────────────────────── */
+
+@keyframes orbit-counter {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes nucleus-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 24px 6px oklch(0.7 0.22 30 / 0.30),
+      0 0 60px 12px oklch(0.7 0.22 30 / 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 48px 12px oklch(0.7 0.22 30 / 0.55),
+      0 0 90px 24px oklch(0.7 0.22 30 / 0.22);
+  }
+}
+
+.nucleus-pulse {
+  animation: nucleus-glow 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nucleus-pulse { animation: none; }
+}
+
 

@@ -46,27 +46,27 @@ export function StatTile({
 }) {
   const toneClass =
     tone === "signal"
-      ? "text-signal"
+      ? "text-signal bg-gradient-to-br from-signal/10 to-transparent border-signal/20"
       : tone === "heat"
-        ? "text-heat"
+        ? "text-heat bg-gradient-to-br from-heat/10 to-transparent border-heat/20"
         : tone === "cool"
-          ? "text-cool"
-          : "text-foreground";
+          ? "text-cool bg-gradient-to-br from-cool/10 to-transparent border-cool/20"
+          : "text-foreground bg-gradient-to-br from-secondary to-transparent";
   return (
-    <div className="panel relative overflow-hidden p-4">
+    <div className={cn("panel panel-hover relative overflow-hidden p-4", toneClass)}>
       <div className="absolute inset-x-0 top-0 h-px speed-line opacity-40" />
-      <p className="label-xs">{label}</p>
-      <p className={cn("num mt-3 text-3xl font-semibold", toneClass)}>
+      <p className="label-xs !text-inherit opacity-80">{label}</p>
+      <p className="num mt-3 text-3xl font-semibold">
         {value}
-        {unit ? <span className="ml-1 text-base text-muted-foreground">{unit}</span> : null}
+        {unit ? <span className="ml-1 text-base opacity-60">{unit}</span> : null}
       </p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs opacity-70">{hint}</p> : null}
     </div>
   );
 }
 
 const tierStyles: Record<string, string> = {
-  high: "border-signal/40 bg-signal/15 text-signal",
+  high: "border-signal bg-signal text-signal-foreground shadow-sm shadow-signal/20",
   medium: "border-heat/40 bg-heat/15 text-heat",
   low: "border-border bg-muted text-muted-foreground",
 };

@@ -15,6 +15,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DistributionRouteImport } from './routes/distribution'
 import { Route as LeadsRouteImport } from './routes/leads'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as ScrapeRouteImport } from './routes/scrape'
 import { Route as SettingsRouteImport } from './routes/settings'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ScrapeRoute = ScrapeRouteImport.update({
+  id: '/scrape',
+  path: '/scrape',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/distribution': typeof DistributionRoute
   '/leads': typeof LeadsRoute
   '/onboarding': typeof OnboardingRoute
+  '/scrape': typeof ScrapeRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/distribution': typeof DistributionRoute
   '/leads': typeof LeadsRoute
   '/onboarding': typeof OnboardingRoute
+  '/scrape': typeof ScrapeRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/distribution': typeof DistributionRoute
   '/leads': typeof LeadsRoute
   '/onboarding': typeof OnboardingRoute
+  '/scrape': typeof ScrapeRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/distribution'
     | '/leads'
     | '/onboarding'
+    | '/scrape'
     | '/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/distribution'
     | '/leads'
     | '/onboarding'
+    | '/scrape'
     | '/settings'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/distribution'
     | '/leads'
     | '/onboarding'
+    | '/scrape'
     | '/settings'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   DistributionRoute: typeof DistributionRoute
   LeadsRoute: typeof LeadsRoute
   OnboardingRoute: typeof OnboardingRoute
+  ScrapeRoute: typeof ScrapeRoute
   SettingsRoute: typeof SettingsRoute
 }
 
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/scrape': {
+      id: '/scrape'
+      path: '/scrape'
+      fullPath: '/scrape'
+      preLoaderRoute: typeof ScrapeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   DistributionRoute: DistributionRoute,
   LeadsRoute: LeadsRoute,
   OnboardingRoute: OnboardingRoute,
+  ScrapeRoute: ScrapeRoute,
   SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,6 +1,28 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
+/* Orbital annotation data — labels that appear next to each ring. */
+const ORBIT_ANNOTATIONS = [
+  {
+    label: "Onboard",
+    subline: "Brand DNA extracted",
+    color: "#ff6c4c",
+    pos: { x: -0.36, y: 0.62 }, // relative (0–1) inside the canvas
+  },
+  {
+    label: "Create",
+    subline: "Videos produced",
+    color: "#ffa946",
+    pos: { x: 0.62, y: 0.14 },
+  },
+  {
+    label: "Distribute",
+    subline: "Boosted to buyers",
+    color: "#a8a8b8",
+    pos: { x: 0.62, y: 0.80 },
+  },
+];
+
 export function OrbitThree() {
   const mountRef = useRef<HTMLDivElement>(null);
 
@@ -8,124 +30,245 @@ export function OrbitThree() {
     const mount = mountRef.current;
     if (!mount) return;
 
+    /* ── Scene ─────────────────────────────────────────────────────── */
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 100);
-    camera.position.set(0, 0.25, 8.4);
+    const camera = new THREE.PerspectiveCamera(44, 1, 0.1, 100);
+    camera.position.set(0, 0.6, 9.5);
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     mount.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xfff7ed, 2.2));
-    const keyLight = new THREE.PointLight(0xff6c4c, 24, 20);
-    keyLight.position.set(4, 4, 5);
-    scene.add(keyLight);
-    const fillLight = new THREE.PointLight(0xffa946, 18, 18);
-    fillLight.position.set(-4, -2, 3);
-    scene.add(fillLight);
+    /* ── Lighting ──────────────────────────────────────────────────── */
+    scene.add(new THREE.AmbientLight(0xfff4e8, 1.8));
 
+    const keyLight = new THREE.DirectionalLight(0xff6c4c, 6);
+    keyLight.position.set(5, 6, 5);
+    scene.add(keyLight);
+
+    const rimLight = new THREE.PointLight(0xffa946, 20, 16);
+    rimLight.position.set(-4, -2, 4);
+    scene.add(rimLight);
+
+    const backLight = new THREE.PointLight(0x6644ff, 8, 12);
+    backLight.position.set(0, -4, -3);
+    scene.add(backLight);
+
+    /* ── System group ──────────────────────────────────────────────── */
     const system = new THREE.Group();
-    system.rotation.x = -0.2;
-    system.rotation.z = -0.12;
+    system.rotation.x = -0.22;
+    system.rotation.z = -0.10;
     scene.add(system);
 
-    const core = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(0.82, 5),
-      new THREE.MeshStandardMaterial({
-        color: 0xff6c4c,
-        emissive: 0xff6c4c,
-        emissiveIntensity: 0.12,
-        metalness: 0.05,
-        roughness: 0.34,
+    /* ── Core nucleus (layered spheres) ───────────────────────────── */
+    // Inner glow sphere
+    const glowMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(1.12, 32, 32),
+      new THREE.MeshBasicMaterial({
+        color: 0xff9050,
+        transparent: true,
+        opacity: 0.12,
       }),
     );
+    system.add(glowMesh);
+
+    // Main core
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: 0xff6c4c,
+      emissive: 0xff4422,
+      emissiveIntensity: 0.22,
+      metalness: 0.08,
+      roughness: 0.28,
+    });
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.88, 6), coreMat);
     system.add(core);
 
-    const halo = new THREE.Mesh(
-      new THREE.SphereGeometry(1.03, 32, 32),
-      new THREE.MeshBasicMaterial({ color: 0xffa946, transparent: true, opacity: 0.08 }),
+    // Outer halo ring (flat torus around equator)
+    const haloRing = new THREE.Mesh(
+      new THREE.TorusGeometry(1.05, 0.022, 16, 100),
+      new THREE.MeshBasicMaterial({ color: 0xffa050, transparent: true, opacity: 0.4 }),
     );
-    system.add(halo);
+    haloRing.rotation.x = Math.PI / 2;
+    system.add(haloRing);
 
-    const ringData = [
-      { radius: 1.75, color: 0xff6c4c, x: 1.1, y: 0.15, speed: 0.0032 },
-      { radius: 2.48, color: 0xffa946, x: 0.72, y: -0.42, speed: -0.0022 },
-      { radius: 3.2, color: 0x1a1a1a, x: 1.25, y: 0.32, speed: 0.0015 },
+    /* ── Orbital rings (3 tilted ellipses) ────────────────────────── */
+    interface RingDef {
+      radius: number;
+      tube: number;
+      color: number;
+      opacity: number;
+      rx: number;
+      ry: number;
+      speed: number;
+      satRadius: number;
+      satColor: number;
+      satEmissive: number;
+    }
+
+    const ringDefs: RingDef[] = [
+      {
+        radius: 1.85,
+        tube: 0.024,
+        color: 0xff6c4c,
+        opacity: 0.75,
+        rx: 1.18,
+        ry: 0.14,
+        speed: 0.0038,
+        satRadius: 0.14,
+        satColor: 0xff6c4c,
+        satEmissive: 0xff4422,
+      },
+      {
+        radius: 2.6,
+        tube: 0.018,
+        color: 0xffa946,
+        opacity: 0.65,
+        rx: 0.70,
+        ry: -0.45,
+        speed: -0.0025,
+        satRadius: 0.11,
+        satColor: 0xffa946,
+        satEmissive: 0xff8800,
+      },
+      {
+        radius: 3.35,
+        tube: 0.015,
+        color: 0x3a3a4a,
+        opacity: 0.35,
+        rx: 1.28,
+        ry: 0.30,
+        speed: 0.0016,
+        satRadius: 0.10,
+        satColor: 0x9090a8,
+        satEmissive: 0x4444aa,
+      },
     ];
+
     const rings: THREE.Mesh[] = [];
 
-    ringData.forEach((item, ringIndex) => {
+    ringDefs.forEach((def) => {
       const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(item.radius, ringIndex === 0 ? 0.025 : 0.017, 16, 180),
+        new THREE.TorusGeometry(def.radius, def.tube, 20, 240),
         new THREE.MeshStandardMaterial({
-          color: item.color,
+          color: def.color,
           transparent: true,
-          opacity: ringIndex === 2 ? 0.28 : 0.7,
-          roughness: 0.35,
+          opacity: def.opacity,
+          roughness: 0.3,
+          metalness: 0.1,
         }),
       );
-      ring.rotation.x = item.x;
-      ring.rotation.y = item.y;
-      ring.userData.speed = item.speed;
+      ring.rotation.x = def.rx;
+      ring.rotation.y = def.ry;
+      ring.userData["speed"] = def.speed;
       system.add(ring);
       rings.push(ring);
 
-      const satellite = new THREE.Mesh(
-        new THREE.SphereGeometry(ringIndex === 0 ? 0.13 : 0.1, 20, 20),
+      /* Satellite — small glowing sphere riding the ring */
+      const sat = new THREE.Mesh(
+        new THREE.SphereGeometry(def.satRadius, 24, 24),
         new THREE.MeshStandardMaterial({
-          color: item.color,
-          emissive: item.color,
-          emissiveIntensity: 0.25,
-          roughness: 0.25,
+          color: def.satColor,
+          emissive: def.satEmissive,
+          emissiveIntensity: 0.5,
+          roughness: 0.18,
+          metalness: 0.2,
         }),
       );
-      satellite.position.set(item.radius, 0, 0);
-      ring.add(satellite);
+      sat.position.set(def.radius, 0, 0);
+      ring.add(sat);
     });
 
-    let frame = 0;
+    /* ── Inner bullseye rings floating around nucleus ─────────────── */
+    [1.05, 1.25, 1.45].forEach((r, i) => {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(r, 0.008, 12, 80),
+        new THREE.MeshBasicMaterial({
+          color: 0xff8844,
+          transparent: true,
+          opacity: 0.08 - i * 0.02,
+        }),
+      );
+      ring.rotation.x = Math.PI / 2 + 0.05 * i;
+      system.add(ring);
+    });
+
+    /* ── Particle field ───────────────────────────────────────────── */
+    const PARTICLE_COUNT = 320;
+    const positions = new Float32Array(PARTICLE_COUNT * 3);
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = 3.8 + Math.random() * 2.5;
+      positions[i * 3 + 0] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = r * Math.cos(phi);
+    }
+    const partGeo = new THREE.BufferGeometry();
+    partGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const partMat = new THREE.PointsMaterial({
+      color: 0xffa060,
+      size: 0.045,
+      transparent: true,
+      opacity: 0.55,
+    });
+    scene.add(new THREE.Points(partGeo, partMat));
+
+    /* ── Pointer interaction ──────────────────────────────────────── */
     let pointerX = 0;
     let pointerY = 0;
-    let reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     const onPointerMove = (event: PointerEvent) => {
       const rect = mount.getBoundingClientRect();
-      pointerX = ((event.clientX - rect.left) / rect.width - 0.5) * 0.35;
-      pointerY = ((event.clientY - rect.top) / rect.height - 0.5) * 0.25;
+      pointerX = ((event.clientX - rect.left) / rect.width - 0.5) * 0.4;
+      pointerY = ((event.clientY - rect.top) / rect.height - 0.5) * 0.28;
     };
+    mount.addEventListener("pointermove", onPointerMove);
 
+    /* ── Resize handler ───────────────────────────────────────────── */
     const resize = () => {
-      const width = mount.clientWidth;
-      const height = mount.clientHeight;
-      if (!width || !height) return;
-      renderer.setSize(width, height, false);
-      camera.aspect = width / height;
+      const w = mount.clientWidth;
+      const h = mount.clientHeight;
+      if (!w || !h) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
-    };
-
-    const animate = () => {
-      frame = window.requestAnimationFrame(animate);
-      if (!reducedMotion) {
-        rings.forEach((ring) => {
-          ring.rotation.z += Number(ring.userData.speed);
-        });
-        core.rotation.y += 0.002;
-        system.rotation.y += (pointerX - system.rotation.y) * 0.025;
-        system.rotation.x += (-0.2 - pointerY - system.rotation.x) * 0.025;
-      }
-      renderer.render(scene, camera);
-    };
-
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const onMotionChange = (event: MediaQueryListEvent) => {
-      reducedMotion = event.matches;
     };
     const observer = new ResizeObserver(resize);
     observer.observe(mount);
-    mount.addEventListener("pointermove", onPointerMove);
-    media.addEventListener("change", onMotionChange);
     resize();
+
+    /* ── Reduced-motion ───────────────────────────────────────────── */
+    let reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onMotionChange = (e: MediaQueryListEvent) => { reducedMotion = e.matches; };
+    media.addEventListener("change", onMotionChange);
+
+    /* ── Animation loop ───────────────────────────────────────────── */
+    let frame = 0;
+    let t = 0;
+    const animate = () => {
+      frame = window.requestAnimationFrame(animate);
+      if (!reducedMotion) {
+        t += 0.008;
+        rings.forEach((ring) => {
+          ring.rotation.z += Number(ring.userData["speed"]);
+        });
+        core.rotation.y += 0.003;
+        core.rotation.x += 0.0008;
+        haloRing.rotation.z += 0.002;
+        // Gentle nucleus pulse via scale
+        const pulse = 1 + Math.sin(t * 1.8) * 0.012;
+        core.scale.setScalar(pulse);
+        glowMesh.scale.setScalar(pulse * 1.05);
+
+        // Mouse-follow tilt
+        system.rotation.y += (pointerX - system.rotation.y) * 0.022;
+        system.rotation.x += (-0.22 - pointerY - system.rotation.x) * 0.022;
+      }
+      renderer.render(scene, camera);
+    };
     animate();
 
     return () => {
@@ -137,13 +280,69 @@ export function OrbitThree() {
       scene.traverse((object) => {
         if (object instanceof THREE.Mesh) {
           object.geometry.dispose();
-          const materials = Array.isArray(object.material) ? object.material : [object.material];
-          materials.forEach((material) => material.dispose());
+          (Array.isArray(object.material) ? object.material : [object.material]).forEach((m) =>
+            m.dispose(),
+          );
         }
       });
       renderer.domElement.remove();
     };
   }, []);
 
-  return <div ref={mountRef} className="absolute inset-0" aria-hidden="true" />;
+  return (
+    <div className="absolute inset-0" aria-hidden="true">
+      {/* Three.js canvas fills the container */}
+      <div ref={mountRef} className="absolute inset-0" />
+
+      {/* ── Annotation labels ──────────────────────────────────────── */}
+      {ORBIT_ANNOTATIONS.map((ann) => (
+        <div
+          key={ann.label}
+          className="pointer-events-none absolute flex items-baseline gap-1.5 select-none"
+          style={{
+            left: `${(ann.pos.x + 0.5) * 100}%`,
+            top: `${ann.pos.y * 100}%`,
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          {/* Connector dot */}
+          <span
+            className="block size-2 shrink-0 rounded-full ring-1 ring-background"
+            style={{ background: ann.color }}
+          />
+          <span
+            className="rounded-md border bg-background/70 px-2.5 py-1 text-sm font-bold leading-none backdrop-blur-sm"
+            style={{ color: ann.color, borderColor: ann.color + "44" }}
+          >
+            {ann.label}{" "}
+            <span className="font-normal text-muted-foreground text-xs">
+              {ann.subline}
+            </span>
+          </span>
+        </div>
+      ))}
+
+      {/* ── Qualify label (bottom-left) ────────────────────────────── */}
+      <div
+        className="pointer-events-none absolute flex items-baseline gap-1.5 select-none"
+        style={{ left: "10%", top: "84%", transform: "translate(-50%, -50%)" }}
+      >
+        <span
+          className="block size-2 shrink-0 rounded-full ring-1 ring-background"
+          style={{ background: "#ff6c4c" }}
+        />
+        <span className="rounded-md border bg-background/70 px-2.5 py-1 text-sm font-bold leading-none backdrop-blur-sm text-[#ff6c4c] border-[#ff6c4c44]">
+          Qualify{" "}
+          <span className="font-normal text-muted-foreground text-xs">protect your time</span>
+        </span>
+      </div>
+
+      {/* ── "ORBIT — Always On" centre label ──────────────────────── */}
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-[120%] flex flex-col items-center gap-1 select-none">
+        <span className="rounded-full border border-border bg-background/70 px-3 py-1 font-display text-xs font-bold uppercase tracking-widest text-foreground backdrop-blur-sm">
+          Orbit · Always On
+        </span>
+      </div>
+    </div>
+  );
 }

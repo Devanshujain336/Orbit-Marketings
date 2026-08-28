@@ -1,6 +1,7 @@
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
+import { summarizeWithGemini } from "./lib/gemini";
 import { renderErrorPage } from "./lib/error-page";
 
 type ServerEntry = {
@@ -46,6 +47,33 @@ function isH3SwallowedErrorBody(body: string): boolean {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    // Handle scraping API endpoint
+    if (request.method === "POST" && request.url.includes("/api/scrape")) {
+      try {
+        const { url: targetUrl } = await request.json();
+        if (!targetUrl) throw new Error("Missing URL");
+        const pageRes = await fetch(targetUrl);
+        const html = await pageRes.text();
+        const plain = html
+          .replace(/<script[^>]*>.*?<\/script>/gs, " ")
+          .replace(/<style[^>]*>.*?<\/style>/gs, " ")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        const data = await summarizeWithGemini(plain, targetUrl);
+        return new Response(JSON.stringify(data), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        console.error(e);
+        return new Response(JSON.stringify({ error: e.message || "Failed" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

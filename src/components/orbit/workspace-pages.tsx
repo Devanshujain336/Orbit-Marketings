@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
@@ -271,7 +271,7 @@ export function DashboardPage() {
   const recentLeads = [...(leads.data ?? [])].sort((a, b) => tierRank(a.tier) - tierRank(b.tier)).slice(0, 4);
 
   return (
-    <AppShell title="Pit wall" subtitle="Live view of content, distribution, and lead triage across the demo workspace.">
+    <AppShell title={`Good morning, ${business.data?.name ?? "Founder"}`} subtitle="Live view of content, distribution, and lead triage across your workspace.">
       <div className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile label="Hot leads" value={leadScore.high} hint={`${leadScore.open} open conversations`} tone="signal" />
@@ -299,15 +299,25 @@ export function DashboardPage() {
             </div>
           </Panel>
 
-          <Panel title="Recent high-value signals">
+          <Panel title="Recent high-value signals" className="xl:col-span-1">
             <div className="space-y-3">
               {recentLeads.map((lead) => (
-                <div key={lead.id} className="rounded-md border border-border bg-secondary/40 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-semibold">{lead.name ?? lead.handle}</p>
+                <div key={lead.id} className="group relative flex flex-col gap-2 rounded-xl border border-border bg-card p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="grid size-8 place-items-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground">
+                        {lead.name?.[0]?.toUpperCase() ?? lead.handle?.[0]?.toUpperCase() ?? "?"}
+                      </div>
+                      <div>
+                        <p className="truncate text-sm font-semibold">{lead.name ?? lead.handle}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{lead.channel}</p>
+                      </div>
+                    </div>
                     <TierBadge tier={lead.tier} score={lead.score} />
                   </div>
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{lead.intent_summary}</p>
+                  <div className="mt-1 rounded-md bg-secondary/50 p-2">
+                    <p className="line-clamp-2 text-xs text-secondary-foreground/80">{lead.intent_summary}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -319,13 +329,20 @@ export function DashboardPage() {
           <Panel title="Production queue" className="lg:col-span-2">
             <div className="grid gap-3 md:grid-cols-2">
               {(shoots.data ?? []).slice(0, 4).map((shoot) => (
-                <div key={shoot.id} className="rounded-md border border-border bg-secondary/40 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold">{shoot.partner}</p>
+                <div key={shoot.id} className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-sm transition-transform hover:-translate-y-0.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold">{shoot.partner}</p>
+                      <p className="label-xs mt-1">{shoot.location ?? "Location TBD"}</p>
+                    </div>
                     <StatusPill status={shoot.status} />
                   </div>
-                  <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{shoot.brief}</p>
-                  <p className="label-xs mt-3">{shoot.location ?? "Location TBD"}</p>
+                  <p className="line-clamp-2 text-xs text-muted-foreground">{shoot.brief}</p>
+                  <div className="mt-auto pt-2">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                      <div className="h-full bg-signal transition-all" style={{ width: shoot.status === "delivered" ? "100%" : shoot.status === "edited" ? "80%" : shoot.status === "filmed" ? "60%" : "30%" }} />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -347,6 +364,19 @@ export function OnboardingPage() {
     offer: "fresh roasted coffee subscriptions for busy teams",
     tone: "sharp, warm, premium",
   });
+
+  useEffect(() => {
+    if (business.data) {
+      setForm({
+        name: business.data.name ?? "",
+        website: business.data.website ?? "",
+        industry: business.data.industry ?? "",
+        audience: business.data.audience ?? "",
+        offer: business.data.offer ?? "",
+        tone: business.data.tone ?? "",
+      });
+    }
+  }, [business.data]);
   const saveMutation = useMutation({
     mutationFn: () => saveBrandProfile(form),
     onSuccess: () => {
