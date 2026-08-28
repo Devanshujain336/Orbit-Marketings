@@ -639,6 +639,32 @@ export function ContentPage() {
   return (
     <AppShell title="Content pipeline" subtitle="Move ideas through offline production or AI generation, then into scheduling.">
       <div className="space-y-6">
+        {/* ── Fastlane promo banner ─────────────────────────────────── */}
+        <a
+          href="https://app.usefastlane.ai/onboarding"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex items-center justify-between gap-4 rounded-xl border border-primary/25 bg-primary/5 px-5 py-3.5 shadow-sm transition-all hover:border-primary/50 hover:bg-primary/10 hover:shadow-md"
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <Clapperboard className="size-4" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-foreground leading-tight">
+                Make your own post &amp; schedule
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Create and publish content directly via Fastlane
+              </p>
+            </div>
+          </div>
+          <span className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+            Open Fastlane
+            <ArrowRight className="size-3" />
+          </span>
+        </a>
+
         <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
           <Panel title="Pipeline board" bodyClassName="p-3">
             <div className="grid gap-3 xl:grid-cols-5">
