@@ -35,6 +35,14 @@ export type BrandProfileInput = {
   audience?: string;
   offer?: string;
   tone?: string;
+  /** From Gemini AI: full summary / positioning paragraph */
+  summary?: string;
+  /** From Gemini AI: brand identity / voice */
+  brandIdentity?: string;
+  /** From Gemini AI: 3 video ad angles */
+  videoAngles?: string[];
+  /** From Gemini AI: 2-3 qualifying questions */
+  qualifyingQuestions?: string[];
 };
 
 export type CreateContentInput = {
@@ -168,18 +176,33 @@ export async function fetchLeadMessages(leadId: string) {
 }
 
 export async function saveBrandProfile(input: BrandProfileInput) {
-  const keywords = [input.industry, input.tone, "fast response", "premium leads"].filter(Boolean) as string[];
+  // Build vibe_keywords: video angles (if from AI) or fallback tags
+  const vibeKeywords: string[] = input.videoAngles && input.videoAngles.length > 0
+    ? input.videoAngles
+    : [input.industry, input.tone, "fast response", "premium leads"].filter(Boolean) as string[];
+
+  // Build positioning: AI summary if available, else a generated line
+  const positioning = input.summary
+    ? input.summary
+    : `${input.name} helps ${input.audience || "growth teams"} move faster from attention to qualified demand.`;
+
+  // Store qualifying questions as JSON in auto_reply_template
+  const autoReplyTemplate = input.qualifyingQuestions && input.qualifyingQuestions.length > 0
+    ? JSON.stringify(input.qualifyingQuestions)
+    : null;
+
   const { data, error } = await supabase
     .from("businesses")
     .update({
       name: input.name,
       website: input.website ?? null,
-      industry: input.industry ?? null,
+      industry: input.brandIdentity ?? input.industry ?? null,
       audience: input.audience ?? null,
       offer: input.offer ?? null,
       tone: input.tone ?? null,
-      positioning: `${input.name} helps ${input.audience || "growth teams"} move faster from attention to qualified demand.`,
-      vibe_keywords: keywords,
+      positioning,
+      vibe_keywords: vibeKeywords,
+      auto_reply_template: autoReplyTemplate,
       palette: {
         base: "asphalt",
         signal: "electric lime",

@@ -110,6 +110,11 @@ function ScrapePage() {
           audience: data.targetAudience || "High-growth buyers",
           offer: data.summary || "",
           tone: data.brandIdentity || "Direct, high velocity",
+          // Full AI analysis fields
+          summary: data.summary,
+          brandIdentity: data.brandIdentity,
+          videoAngles: data.videoAngles,
+          qualifyingQuestions: data.qualifyingQuestions,
         });
       } catch (saveErr) {
         console.error("Auto-syncing brand profile failed:", saveErr);

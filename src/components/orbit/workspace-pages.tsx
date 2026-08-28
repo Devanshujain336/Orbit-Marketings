@@ -357,14 +357,15 @@ export function OnboardingPage() {
   const queryClient = useQueryClient();
   const business = useQuery({ queryKey: ["business"], queryFn: fetchBusiness });
   const [form, setForm] = useState({
-    name: "Kettle & Co.",
-    website: "https://kettle.example",
-    industry: "Specialty coffee subscription",
-    audience: "urban founders and operators",
-    offer: "fresh roasted coffee subscriptions for busy teams",
-    tone: "sharp, warm, premium",
+    name: "",
+    website: "",
+    industry: "",
+    audience: "",
+    offer: "",
+    tone: "",
   });
 
+  // Sync fetched business data into form
   useEffect(() => {
     if (business.data) {
       setForm({
@@ -377,80 +378,238 @@ export function OnboardingPage() {
       });
     }
   }, [business.data]);
+
   const saveMutation = useMutation({
     mutationFn: () => saveBrandProfile(form),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["business"] });
-      toast.success("Brand analysis saved");
+      toast.success("Brand profile saved");
     },
     onError: () => toast.error("Could not save brand profile"),
   });
 
+  // Parse qualifying questions stored as JSON in auto_reply_template
+  const qualifyingQuestions: string[] = (() => {
+    try {
+      const raw = business.data?.auto_reply_template;
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  // Video angles stored in vibe_keywords (if they look like sentences)
+  const vibeKeywords = business.data?.vibe_keywords ?? [];
+  const videoAngles = vibeKeywords.filter((k) => k.length > 30);
+  const dnaChips = vibeKeywords.filter((k) => k.length <= 30);
+
+  const hasAnalysis = !!business.data?.positioning && business.data.positioning.length > 10;
+  const isLoading = business.isLoading;
+
   return (
     <AppShell
       title="Onboarding"
-      subtitle="Feed Orbit the startup surface area, then lock the creative and reply direction."
-      actions={<Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}><Sparkles className="size-4" /> Analyze</Button>}
+      subtitle="Orbit learns your startup once, then markets it forever. Review and refine what was extracted from your website."
+      actions={
+        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+          <Sparkles className="size-4" /> Save profile
+        </Button>
+      }
     >
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <Panel title="Startup intake">
-          <div className="grid gap-4">
-            <Field label="Business name">
-              <Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
-            </Field>
-            <Field label="Website">
-              <Input value={form.website} onChange={(event) => setForm((current) => ({ ...current, website: event.target.value }))} />
-            </Field>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Industry">
-                <Input value={form.industry} onChange={(event) => setForm((current) => ({ ...current, industry: event.target.value }))} />
+      <div className="space-y-6">
+        {/* Top row: intake form + AI summary */}
+        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          {/* ── Left: editable intake form ──────────────────────────── */}
+          <Panel title="Brand intake">
+            <div className="grid gap-4">
+              <Field label="Business name">
+                <Input
+                  value={form.name}
+                  placeholder="e.g. Orbit"
+                  onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))}
+                />
               </Field>
-              <Field label="Tone">
-                <Input value={form.tone} onChange={(event) => setForm((current) => ({ ...current, tone: event.target.value }))} />
+              <Field label="Website">
+                <Input
+                  value={form.website}
+                  placeholder="https://yourwebsite.com"
+                  onChange={(e) => setForm((c) => ({ ...c, website: e.target.value }))}
+                />
               </Field>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Industry / Voice">
+                  <Input
+                    value={form.industry}
+                    placeholder="e.g. SaaS – bold, direct"
+                    onChange={(e) => setForm((c) => ({ ...c, industry: e.target.value }))}
+                  />
+                </Field>
+                <Field label="Tone">
+                  <Input
+                    value={form.tone}
+                    placeholder="e.g. sharp, warm, premium"
+                    onChange={(e) => setForm((c) => ({ ...c, tone: e.target.value }))}
+                  />
+                </Field>
+              </div>
+              <Field label="Ideal Customer (ICP)">
+                <Input
+                  value={form.audience}
+                  placeholder="e.g. founders, growth teams, solo operators"
+                  onChange={(e) => setForm((c) => ({ ...c, audience: e.target.value }))}
+                />
+              </Field>
+              <Field label="Core Offer">
+                <Textarea
+                  value={form.offer}
+                  placeholder="What do you sell and why does it win?"
+                  onChange={(e) => setForm((c) => ({ ...c, offer: e.target.value }))}
+                  className="min-h-[88px]"
+                />
+              </Field>
+              <p className="text-xs text-muted-foreground">
+                Go to{" "}
+                <a href="/scrape" className="font-semibold text-primary underline-offset-2 hover:underline">
+                  AI Scraper
+                </a>{" "}
+                to auto-fill this form from your website.
+              </p>
             </div>
-            <Field label="Audience">
-              <Input value={form.audience} onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))} />
-            </Field>
-            <Field label="Offer">
-              <Textarea value={form.offer} onChange={(event) => setForm((current) => ({ ...current, offer: event.target.value }))} className="min-h-24" />
-            </Field>
-          </div>
-        </Panel>
+          </Panel>
 
-        <Panel title="Analysis result" className="sweep">
-          <div className="space-y-6">
-            <div>
-              <p className="label-xs">Positioning line</p>
-              <h2 className="mt-2 text-3xl font-semibold leading-tight">{business.data?.positioning ?? `${form.name} converts attention into qualified demand before founders enter the chat.`}</h2>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-md border border-border bg-asphalt p-4">
-                <p className="label-xs">Base</p>
-                <p className="mt-2 text-sm font-medium">Asphalt / carbon</p>
+          {/* ── Right: AI positioning summary ───────────────────────── */}
+          <Panel title="AI brand positioning" className="sweep">
+            {isLoading ? (
+              <div className="flex h-40 items-center justify-center">
+                <span className="text-sm text-muted-foreground animate-pulse">Loading analysis…</span>
               </div>
-              <div className="rounded-md border border-signal/40 bg-signal/15 p-4 text-signal">
-                <p className="label-xs text-signal/80">Signal</p>
-                <p className="mt-2 text-sm font-medium">Electric lime</p>
+            ) : hasAnalysis ? (
+              <div className="space-y-5">
+                {/* Positioning headline */}
+                <div>
+                  <p className="label-xs mb-2">Positioning statement</p>
+                  <p className="text-base font-medium leading-relaxed text-foreground">
+                    {business.data?.positioning}
+                  </p>
+                </div>
+
+                {/* ICP */}
+                {business.data?.audience && (
+                  <div className="rounded-xl border border-border bg-card p-4">
+                    <p className="label-xs mb-1">Ideal Customer Profile (ICP)</p>
+                    <p className="text-sm leading-relaxed text-foreground">{business.data.audience}</p>
+                  </div>
+                )}
+
+                {/* Core offer */}
+                {business.data?.offer && (
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <p className="label-xs mb-1 text-primary/80">Core Offer</p>
+                    <p className="text-sm leading-relaxed text-foreground">{business.data.offer}</p>
+                  </div>
+                )}
+
+                {/* DNA chips */}
+                {dnaChips.length > 0 && (
+                  <div>
+                    <p className="label-xs mb-2">Brand DNA</p>
+                    <div className="flex flex-wrap gap-2">
+                      {dnaChips.map((chip) => (
+                        <Chip key={chip}>{chip}</Chip>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <SpeedLine />
               </div>
-              <div className="rounded-md border border-heat/40 bg-heat/15 p-4 text-heat">
-                <p className="label-xs text-heat/80">Boost</p>
-                <p className="mt-2 text-sm font-medium">Amber urgency</p>
+            ) : (
+              <div className="flex h-40 flex-col items-center justify-center gap-3 text-center">
+                <Sparkles className="size-7 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">
+                  No analysis yet. Scrape your website to populate this panel.
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <a href="/scrape">
+                    <Rocket className="mr-1.5 size-3.5" />
+                    Analyze website
+                  </a>
+                </Button>
               </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(business.data?.vibe_keywords ?? [form.industry, form.tone, "premium leads", "instant replies"]).filter(Boolean).map((item) => (
-                <Chip key={item}>{item}</Chip>
-              ))}
-            </div>
-            <SpeedLine />
-            <p className="text-sm text-muted-foreground">Saved profiles feed the content generator, media scheduling notes, and lead auto-reply voice across the workspace.</p>
+            )}
+          </Panel>
+        </div>
+
+        {/* Bottom row: Video angles + Qualifying questions */}
+        {hasAnalysis && (
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* ── Video angles ─────────────────────────────────────── */}
+            <Panel title="AI video angles">
+              {videoAngles.length > 0 ? (
+                <div className="space-y-3">
+                  {videoAngles.map((angle, i) => (
+                    <div
+                      key={i}
+                      className="flex gap-3 rounded-xl border border-border bg-card p-4 shadow-sm"
+                    >
+                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary">
+                        {i + 1}
+                      </span>
+                      <p className="text-sm leading-relaxed text-foreground">{angle}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  Video angles will appear here after scraping your website.
+                </p>
+              )}
+            </Panel>
+
+            {/* ── Qualifying questions ─────────────────────────────── */}
+            <Panel title="AI qualifying questions">
+              {qualifyingQuestions.length > 0 ? (
+                <div className="space-y-3">
+                  {qualifyingQuestions.map((q, i) => (
+                    <div
+                      key={i}
+                      className="flex gap-3 rounded-xl border border-border bg-card p-4 shadow-sm"
+                    >
+                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-signal/15 font-mono text-xs font-bold text-signal">
+                        Q{i + 1}
+                      </span>
+                      <p className="text-sm leading-relaxed text-foreground">{q}</p>
+                    </div>
+                  ))}
+                  <p className="text-xs text-muted-foreground pt-1">
+                    Orbit uses these to automatically qualify every inbound DM before it reaches you.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  Qualifying questions will appear here after scraping your website.
+                </p>
+              )}
+            </Panel>
           </div>
-        </Panel>
+        )}
+
+        {/* Analyzed-at badge */}
+        {business.data?.analyzed_at && (
+          <p className="text-right text-xs text-muted-foreground">
+            Last analyzed:{" "}
+            <span className="font-semibold text-foreground">
+              {new Date(business.data.analyzed_at).toLocaleString()}
+            </span>
+          </p>
+        )}
       </div>
     </AppShell>
   );
 }
+
 
 export function ContentPage() {
   const queryClient = useQueryClient();
