@@ -298,43 +298,70 @@ export function OrbitThree() {
       {ORBIT_ANNOTATIONS.map((ann) => (
         <div
           key={ann.label}
-          className="pointer-events-none absolute flex items-baseline gap-1.5 select-none"
+          className="pointer-events-none absolute flex flex-col md:flex-row items-center md:items-baseline gap-1 md:gap-1.5 select-none"
           style={{
-            left: `${(ann.pos.x + 0.5) * 100}%`,
-            top: `${ann.pos.y * 100}%`,
+            "--pos-x-desktop": `${(ann.pos.x + 0.5) * 100}%`,
+            "--pos-x-mobile": `${(ann.pos.x * 0.45 + 0.5) * 100}%`, // pull inward on mobile
+            "--pos-y": `${ann.pos.y * 100}%`,
+            left: "var(--pos-x-mobile)",
+            top: "var(--pos-y)",
             transform: "translate(-50%, -50%)",
-          }}
+          } as React.CSSProperties}
         >
-          {/* Connector dot */}
-          <span
-            className="block size-2 shrink-0 rounded-full ring-1 ring-background"
-            style={{ background: ann.color }}
-          />
-          <span
-            className="rounded-md border bg-background/70 px-2.5 py-1 text-sm font-bold leading-none backdrop-blur-sm"
-            style={{ color: ann.color, borderColor: ann.color + "44" }}
-          >
-            {ann.label}{" "}
-            <span className="font-normal text-muted-foreground text-xs">
-              {ann.subline}
+          {/* We use a tiny style block to apply the desktop position via media query, since inline styles don't support breakpoints directly */}
+          <style>{`
+            @media (min-width: 768px) {
+              div[data-label="${ann.label}"] { left: var(--pos-x-desktop) !important; }
+            }
+          `}</style>
+          
+          <div data-label={ann.label} className="contents">
+            {/* Connector dot */}
+            <span
+              className="block size-2 shrink-0 rounded-full ring-1 ring-background"
+              style={{ background: ann.color }}
+            />
+            <span
+              className="rounded-md border bg-background/70 px-2 py-0.5 md:px-2.5 md:py-1 text-xs md:text-sm font-bold leading-none backdrop-blur-sm whitespace-nowrap text-center"
+              style={{ color: ann.color, borderColor: ann.color + "44" }}
+            >
+              {ann.label}{" "}
+              <span className="block md:inline font-normal text-muted-foreground text-[10px] md:text-xs md:ml-1 mt-0.5 md:mt-0">
+                {ann.subline}
+              </span>
             </span>
-          </span>
+          </div>
         </div>
       ))}
 
       {/* ── Qualify label (bottom-left) ────────────────────────────── */}
       <div
-        className="pointer-events-none absolute flex items-baseline gap-1.5 select-none"
-        style={{ left: "10%", top: "84%", transform: "translate(-50%, -50%)" }}
+        className="pointer-events-none absolute flex flex-col md:flex-row items-center md:items-baseline gap-1 md:gap-1.5 select-none"
+        style={{ 
+          "--pos-x-desktop": "10%", 
+          "--pos-x-mobile": "25%",
+          left: "var(--pos-x-mobile)", 
+          top: "84%", 
+          transform: "translate(-50%, -50%)" 
+        } as React.CSSProperties}
       >
-        <span
-          className="block size-2 shrink-0 rounded-full ring-1 ring-background"
-          style={{ background: "#ff6c4c" }}
-        />
-        <span className="rounded-md border bg-background/70 px-2.5 py-1 text-sm font-bold leading-none backdrop-blur-sm text-[#ff6c4c] border-[#ff6c4c44]">
-          Qualify{" "}
-          <span className="font-normal text-muted-foreground text-xs">protect your time</span>
-        </span>
+        <style>{`
+          @media (min-width: 768px) {
+            div[data-label="Qualify"] { left: var(--pos-x-desktop) !important; }
+          }
+        `}</style>
+        <div data-label="Qualify" className="contents">
+          <span
+            className="block size-2 shrink-0 rounded-full ring-1 ring-background"
+            style={{ background: "#ff6c4c" }}
+          />
+          <span className="rounded-md border bg-background/70 px-2 py-0.5 md:px-2.5 md:py-1 text-xs md:text-sm font-bold leading-none backdrop-blur-sm text-[#ff6c4c] border-[#ff6c4c44] whitespace-nowrap text-center">
+            Qualify{" "}
+            <span className="block md:inline font-normal text-muted-foreground text-[10px] md:text-xs md:ml-1 mt-0.5 md:mt-0">
+              protect your time
+            </span>
+          </span>
+        </div>
       </div>
 
       {/* ── "ORBIT — Always On" centre label ──────────────────────── */}
