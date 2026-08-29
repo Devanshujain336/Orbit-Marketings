@@ -420,9 +420,9 @@ export function OnboardingPage() {
     >
       <div className="space-y-6">
         {/* Top row: intake form + AI summary */}
-        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[0.9fr_1.1fr]">
           {/* ── Left: editable intake form ──────────────────────────── */}
-          <Panel title="Brand intake">
+          <Panel title="Brand intake" className="min-w-0">
             <div className="grid gap-4">
               <Field label="Business name">
                 <Input
@@ -480,7 +480,7 @@ export function OnboardingPage() {
           </Panel>
 
           {/* ── Right: AI positioning summary ───────────────────────── */}
-          <Panel title="AI brand positioning" className="sweep">
+          <Panel title="AI brand positioning" className="sweep min-w-0">
             {isLoading ? (
               <div className="flex h-40 items-center justify-center">
                 <span className="text-sm text-muted-foreground animate-pulse">Loading analysis…</span>
@@ -546,7 +546,7 @@ export function OnboardingPage() {
         {hasAnalysis && (
           <div className="grid gap-6 lg:grid-cols-2">
             {/* ── Video angles ─────────────────────────────────────── */}
-            <Panel title="AI video angles">
+            <Panel title="AI video angles" className="min-w-0">
               {videoAngles.length > 0 ? (
                 <div className="space-y-3">
                   {videoAngles.map((angle, i) => (
@@ -569,7 +569,7 @@ export function OnboardingPage() {
             </Panel>
 
             {/* ── Qualifying questions ─────────────────────────────── */}
-            <Panel title="AI qualifying questions">
+            <Panel title="AI qualifying questions" className="min-w-0">
               {qualifyingQuestions.length > 0 ? (
                 <div className="space-y-3">
                   {qualifyingQuestions.map((q, i) => (
@@ -666,12 +666,12 @@ export function ContentPage() {
         </a>
 
         <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-          <Panel title="Pipeline board" bodyClassName="p-3">
-            <div className="grid gap-3 xl:grid-cols-5">
+          <Panel title="Pipeline board" bodyClassName="p-3 overflow-hidden">
+            <div className="flex gap-3 overflow-x-auto pb-4 snap-x xl:grid xl:grid-cols-5 xl:overflow-visible xl:pb-0 xl:snap-none">
               {CONTENT_STAGES.map((stage) => {
                 const items = (content.data ?? []).filter((item) => item.status === stage.key);
                 return (
-                  <div key={stage.key} className="min-h-72 rounded-md border border-border bg-background/60 p-3">
+                  <div key={stage.key} className="min-h-72 w-[280px] shrink-0 snap-start rounded-md border border-border bg-background/60 p-3 xl:w-auto">
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <p className="label-xs">{stage.label}</p>
                       <span className="num text-xs text-muted-foreground">{items.length}</span>
