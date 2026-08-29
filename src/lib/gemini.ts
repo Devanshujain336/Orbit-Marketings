@@ -4,7 +4,12 @@
  * @param url The analyzed website URL.
  * @returns Structured marketing intelligence summary.
  */
-export async function summarizeWithGemini(text: string, url?: string): Promise<{
+export async function summarizeWithGemini(
+  text: string, 
+  url?: string,
+  title?: string,
+  description?: string
+): Promise<{
   summary: string;
   brandIdentity: string;
   targetAudience: string;
@@ -86,12 +91,22 @@ ${text.slice(0, 8000)}`;
   // Resilient heuristic extraction
   const cleanSnippet = text.replace(/\s+/g, ' ').trim();
   const sentences = cleanSnippet.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 20);
-  const coreSentences = sentences.slice(0, 3).join('. ') + '.';
+  const coreSentences = sentences.slice(0, 3).join('. ') + (sentences.length > 0 ? '.' : '');
 
   const domain = url ? new URL(url).hostname.replace('www.', '') : 'this brand';
+  
+  let fallbackSummary = description 
+    ? description 
+    : (coreSentences || `Orbit extracted content from ${domain}. The platform focuses on high-converting growth channels, modern positioning, and customer acquisition.`);
+
+  if (title && fallbackSummary !== description) {
+    fallbackSummary = `${title} — ${fallbackSummary}`;
+  } else if (title) {
+    fallbackSummary = `${title}: ${fallbackSummary}`;
+  }
 
   return {
-    summary: coreSentences || `Orbit extracted content from ${domain}. The platform focuses on high-converting growth channels, modern positioning, and customer acquisition.`,
+    summary: fallbackSummary,
     brandIdentity: `Focused and outcome-driven tone tailored for modern buyers exploring ${domain}.`,
     targetAudience: "Startups, founders, and high-growth teams seeking predictable demand generation.",
     videoAngles: [
