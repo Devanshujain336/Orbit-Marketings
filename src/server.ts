@@ -1,7 +1,7 @@
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
-import { summarizeWithGemini } from "./lib/gemini";
+
 import { renderErrorPage } from "./lib/error-page";
 
 type ServerEntry = {
