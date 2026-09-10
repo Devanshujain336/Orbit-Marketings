@@ -756,80 +756,343 @@ export function ContentPage() {
   );
 }
 
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function monthGrid(month: Date) {
+  const first = startOfMonth(month);
+  const offset = (first.getDay() + 6) % 7; // Monday-first
+  const days: Date[] = [];
+  for (let i = 0; i < 42; i += 1) {
+    days.push(new Date(first.getFullYear(), first.getMonth(), 1 - offset + i));
+  }
+  return days;
+}
+
+function sameDay(a: Date, b: Date) {
+  return a.toDateString() === b.toDateString();
+}
+
+function rupees(value: number) {
+  return `₹${Math.round(value).toLocaleString("en-IN")}`;
+}
+
 export function DistributionPage() {
   const queryClient = useQueryClient();
   const content = useQuery({ queryKey: ["content-items"], queryFn: fetchContentItems });
   const schedules = useQuery({ queryKey: ["schedules"], queryFn: fetchSchedules });
   const readyContent = (content.data ?? []).filter((item) => item.status === "ready" || item.status === "scheduled");
-  const [form, setForm] = useState({ contentItemId: "", platform: "instagram", publishAt: "", adBudget: 3500, audienceNotes: "Founders in Bengaluru, Mumbai, Delhi. Retarget warm engagers first." });
+  const allSchedules = schedules.data ?? [];
+
+  const [platformFilter, setPlatformFilter] = useState("all");
+  const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [form, setForm] = useState(() => ({
+    contentItemId: "",
+    platform: "instagram",
+    publishAt: toLocalInputValue(suggestedSlot("instagram")),
+    adBudget: 3500,
+    audienceNotes: "Founders in Bengaluru, Mumbai, Delhi. Retarget warm engagers first.",
+  }));
+
+  const visible = useMemo(
+    () => allSchedules.filter((item) => platformFilter === "all" || item.platform === platformFilter),
+    [allSchedules, platformFilter],
+  );
+
+  const totals = useMemo(() => {
+    const queued = allSchedules.filter((item) => item.status === "scheduled");
+    const spend = allSchedules.reduce((sum, item) => sum + safeNumber(item.ad_budget), 0);
+    const projected = allSchedules.reduce((sum, item) => sum + estimateReach(safeNumber(item.ad_budget), item.platform).leads, 0);
+    return {
+      queued: queued.length,
+      published: allSchedules.filter((item) => item.status === "published").length,
+      spend,
+      projected,
+    };
+  }, [allSchedules]);
+
+  const projection = estimateReach(form.adBudget, form.platform);
+
   const scheduleMutation = useMutation({
-    mutationFn: () => createSchedule(form),
-    onSuccess: () => {
-      invalidateOrbit(queryClient);
-      toast.success("Video scheduled");
+    mutationFn: () => {
+      if (!form.publishAt) throw new Error("Pick a publish time first.");
+      if (new Date(form.publishAt).getTime() < Date.now() - 60_000) throw new Error("Publish time is in the past.");
+      if (form.adBudget < 500) throw new Error("Boost budget must be at least ₹500.");
+      return createSchedule({ ...form, publishAt: new Date(form.publishAt).toISOString() });
     },
-    onError: () => toast.error("Could not schedule video"),
+    onSuccess: (created) => {
+      invalidateOrbit(queryClient);
+      setMonth(startOfMonth(new Date(created.publish_at)));
+      toast.success(`${channelLabel(created.platform)} post queued for ${formatDateTime(created.publish_at)}`);
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not schedule video"),
   });
 
+  const publishMutation = useMutation({
+    mutationFn: (schedule: Schedule) => publishSchedule(schedule),
+    onSuccess: () => {
+      invalidateOrbit(queryClient);
+      toast.success("Post marked live");
+    },
+    onError: () => toast.error("Could not publish that post"),
+  });
+
+  const patchMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof updateSchedule>[1] }) => updateSchedule(id, patch),
+    onSuccess: () => {
+      invalidateOrbit(queryClient);
+      toast.success("Schedule updated");
+    },
+    onError: () => toast.error("Could not update that post"),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => deleteSchedule(id),
+    onSuccess: () => {
+      invalidateOrbit(queryClient);
+      toast.success("Removed from the calendar");
+    },
+    onError: () => toast.error("Could not remove that post"),
+  });
+
+  const dueMutation = useMutation({
+    mutationFn: () => publishDueSchedules(allSchedules),
+    onSuccess: (count) => {
+      invalidateOrbit(queryClient);
+      toast.success(count ? `${count} post${count > 1 ? "s" : ""} went live` : "Nothing was due yet");
+    },
+    onError: () => toast.error("Could not run due posts"),
+  });
+
+  const days = monthGrid(month);
+  const dayList = selectedDay
+    ? visible.filter((item) => sameDay(new Date(item.publish_at), selectedDay))
+    : visible;
+  const contentTitle = (id: string | null) =>
+    (content.data ?? []).find((item) => item.id === id)?.title ?? "Unlinked video";
+
   return (
-    <AppShell title="Distribution" subtitle="Calendar-ready publishing and boost planning for Instagram and Facebook.">
-      <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-        <Panel title="Schedule a video">
-          <div className="space-y-4">
-            <Field label="Ready content">
-              <Select value={form.contentItemId || "none"} onValueChange={(value) => setForm((current) => ({ ...current, contentItemId: value === "none" ? "" : value }))}>
-                <SelectTrigger><SelectValue placeholder="Pick video" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No content link</SelectItem>
-                  {readyContent.map((item) => <SelectItem key={item.id} value={item.id}>{item.title}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Platform">
-                <Select value={form.platform} onValueChange={(value) => setForm((current) => ({ ...current, platform: value }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+    <AppShell
+      title="Distribution"
+      subtitle="Plan the post, set the boost, watch the projected leads — then push it live."
+      actions={
+        <Button variant="secondary" onClick={() => dueMutation.mutate()} disabled={dueMutation.isPending}>
+          <Radio className="size-4" /> Run due posts
+        </Button>
+      }
+    >
+      <div className="space-y-6">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatTile label="Queued" value={totals.queued} tone="heat" hint="Waiting on their slot" />
+          <StatTile label="Published" value={totals.published} tone="signal" hint="Already live" />
+          <StatTile label="Boost spend" value={rupees(totals.spend)} hint="Across the calendar" />
+          <StatTile label="Projected leads" value={totals.projected} tone="cool" hint="From current budgets" />
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+          <Panel title="Schedule a video">
+            <div className="space-y-4">
+              <Field label="Ready content">
+                <Select value={form.contentItemId || "none"} onValueChange={(value) => setForm((current) => ({ ...current, contentItemId: value === "none" ? "" : value }))}>
+                  <SelectTrigger><SelectValue placeholder="Pick video" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="instagram">Instagram</SelectItem>
-                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="none">No content link</SelectItem>
+                    {readyContent.map((item) => <SelectItem key={item.id} value={item.id}>{item.title}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Boost budget">
-                <Input type="number" value={form.adBudget} onChange={(event) => setForm((current) => ({ ...current, adBudget: Number(event.target.value) }))} />
-              </Field>
-            </div>
-            <Field label="Publish time">
-              <Input type="datetime-local" value={form.publishAt} onChange={(event) => setForm((current) => ({ ...current, publishAt: event.target.value }))} />
-            </Field>
-            <Field label="Audience notes">
-              <Textarea value={form.audienceNotes} onChange={(event) => setForm((current) => ({ ...current, audienceNotes: event.target.value }))} />
-            </Field>
-            <Button className="w-full" onClick={() => scheduleMutation.mutate()} disabled={scheduleMutation.isPending}><CalendarClock className="size-4" /> Schedule boost</Button>
-          </div>
-        </Panel>
-
-        <Panel title="Launch calendar">
-          <div className="grid gap-3 md:grid-cols-2">
-            {(schedules.data ?? []).map((schedule) => (
-              <div key={schedule.id} className="rounded-md border border-border bg-secondary/40 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="label-xs">{channelLabel(schedule.platform)}</p>
-                  <StatusPill status={schedule.status} />
-                </div>
-                <p className="num mt-3 text-2xl font-semibold">{formatDateTime(schedule.publish_at)}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{schedule.audience_notes}</p>
-                <div className="mt-4 flex items-center gap-2 text-sm text-heat">
-                  <CircleDollarSign className="size-4" /> ₹{schedule.ad_budget.toLocaleString("en-IN")} boost
-                </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Platform">
+                  <Select
+                    value={form.platform}
+                    onValueChange={(value) =>
+                      setForm((current) => ({
+                        ...current,
+                        platform: value,
+                        publishAt: toLocalInputValue(suggestedSlot(value)),
+                      }))
+                    }
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="facebook">Facebook</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Boost budget (₹)">
+                  <Input type="number" min={500} step={500} value={form.adBudget} onChange={(event) => setForm((current) => ({ ...current, adBudget: Number(event.target.value) }))} />
+                </Field>
               </div>
-            ))}
+              <Field label="Publish time">
+                <Input type="datetime-local" value={form.publishAt} onChange={(event) => setForm((current) => ({ ...current, publishAt: event.target.value }))} />
+              </Field>
+              <button
+                type="button"
+                className="text-xs font-semibold text-signal underline-offset-4 hover:underline"
+                onClick={() => setForm((current) => ({ ...current, publishAt: toLocalInputValue(suggestedSlot(current.platform)) }))}
+              >
+                Use best time for {channelLabel(form.platform)}
+              </button>
+              <Field label="Audience notes">
+                <Textarea value={form.audienceNotes} onChange={(event) => setForm((current) => ({ ...current, audienceNotes: event.target.value }))} />
+              </Field>
+              <div className="grid grid-cols-3 gap-2 rounded-md border border-border bg-secondary/40 p-3 text-center">
+                {[
+                  { label: "Reach", value: projection.reach.toLocaleString("en-IN") },
+                  { label: "Clicks", value: projection.clicks.toLocaleString("en-IN") },
+                  { label: "Leads", value: projection.leads.toLocaleString("en-IN") },
+                ].map((cell) => (
+                  <div key={cell.label}>
+                    <p className="label-xs">{cell.label}</p>
+                    <p className="num mt-1 text-lg font-semibold">{cell.value}</p>
+                  </div>
+                ))}
+              </div>
+              <Button className="w-full" onClick={() => scheduleMutation.mutate()} disabled={scheduleMutation.isPending}>
+                <CalendarClock className="size-4" /> Schedule boost
+              </Button>
+            </div>
+          </Panel>
+
+          <div className="space-y-6">
+            <Panel
+              title={new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(month)}
+              action={
+                <div className="flex items-center gap-2">
+                  <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                    <SelectTrigger className="h-8 w-[130px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All platforms</SelectItem>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="facebook">Facebook</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="sm" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>←</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}>→</Button>
+                </div>
+              }
+            >
+              <div className="grid grid-cols-7 gap-1">
+                {WEEKDAYS.map((day) => (
+                  <p key={day} className="label-xs pb-1 text-center">{day}</p>
+                ))}
+                {days.map((day) => {
+                  const items = visible.filter((item) => sameDay(new Date(item.publish_at), day));
+                  const inMonth = day.getMonth() === month.getMonth();
+                  const isSelected = selectedDay ? sameDay(day, selectedDay) : false;
+                  return (
+                    <button
+                      key={day.toISOString()}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDay(isSelected ? null : day);
+                        const slot = suggestedSlot(form.platform, new Date());
+                        const target = new Date(day);
+                        target.setHours(slot.getHours(), slot.getMinutes(), 0, 0);
+                        setForm((current) => ({ ...current, publishAt: toLocalInputValue(target) }));
+                      }}
+                      className={cn(
+                        "min-h-16 rounded-md border border-border/60 p-1.5 text-left transition-colors hover:border-signal/50",
+                        !inMonth && "opacity-40",
+                        isSelected && "border-signal bg-signal/10",
+                      )}
+                    >
+                      <span className="num text-xs text-muted-foreground">{day.getDate()}</span>
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        {items.slice(0, 3).map((item) => (
+                          <span
+                            key={item.id}
+                            className={cn(
+                              "size-1.5 rounded-full",
+                              item.status === "published" ? "bg-signal" : "bg-heat",
+                            )}
+                          />
+                        ))}
+                        {items.length > 3 ? <span className="num text-[10px] text-muted-foreground">+{items.length - 3}</span> : null}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </Panel>
+
+            <Panel
+              title={selectedDay ? `Posts on ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(selectedDay)}` : "Launch queue"}
+              action={selectedDay ? <Button variant="ghost" size="sm" onClick={() => setSelectedDay(null)}>Show all</Button> : null}
+              bodyClassName="space-y-3"
+            >
+              {dayList.length === 0 ? (
+                <EmptyState title="Nothing scheduled here" hint="Pick a ready video, set a time, and queue the boost." />
+              ) : (
+                dayList.map((schedule) => {
+                  const projected = estimateReach(safeNumber(schedule.ad_budget), schedule.platform);
+                  return (
+                    <div key={schedule.id} className="rounded-md border border-border bg-secondary/40 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="label-xs">{channelLabel(schedule.platform)}</p>
+                          <p className="truncate font-semibold">{contentTitle(schedule.content_item_id)}</p>
+                        </div>
+                        <StatusPill status={schedule.status} />
+                      </div>
+                      <p className="num mt-2 text-xl font-semibold">{formatDateTime(schedule.publish_at)}</p>
+                      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{schedule.audience_notes}</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+                        <span className="flex items-center gap-1.5 text-heat"><CircleDollarSign className="size-4" /> {rupees(safeNumber(schedule.ad_budget))}</span>
+                        <span className="text-muted-foreground">≈ {projected.reach.toLocaleString("en-IN")} reach</span>
+                        <span className="text-muted-foreground">≈ {projected.leads} leads</span>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {schedule.status !== "published" ? (
+                          <Button size="sm" onClick={() => publishMutation.mutate(schedule)} disabled={publishMutation.isPending}>
+                            <Radio className="size-4" /> Publish now
+                          </Button>
+                        ) : null}
+                        {schedule.status === "scheduled" ? (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              const next = new Date(schedule.publish_at);
+                              next.setDate(next.getDate() + 1);
+                              patchMutation.mutate({ id: schedule.id, patch: { publishAt: next.toISOString() } });
+                            }}
+                            disabled={patchMutation.isPending}
+                          >
+                            <Timer className="size-4" /> Push +1 day
+                          </Button>
+                        ) : null}
+                        {schedule.status === "scheduled" ? (
+                          <Button size="sm" variant="outline" onClick={() => patchMutation.mutate({ id: schedule.id, patch: { status: "paused" } })} disabled={patchMutation.isPending}>
+                            Pause
+                          </Button>
+                        ) : null}
+                        {schedule.status === "paused" ? (
+                          <Button size="sm" variant="outline" onClick={() => patchMutation.mutate({ id: schedule.id, patch: { status: "scheduled" } })} disabled={patchMutation.isPending}>
+                            Resume
+                          </Button>
+                        ) : null}
+                        <Button size="sm" variant="ghost" onClick={() => removeMutation.mutate(schedule.id)} disabled={removeMutation.isPending}>
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </Panel>
           </div>
-        </Panel>
+        </div>
       </div>
     </AppShell>
   );
 }
+
 
 export function LeadsPage() {
   const leadsQuery = useQuery({ queryKey: ["leads"], queryFn: fetchLeads });
