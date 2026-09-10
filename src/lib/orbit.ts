@@ -278,6 +278,91 @@ export async function createSchedule(input: CreateScheduleInput) {
   return data as Schedule;
 }
 
+export type UpdateScheduleInput = {
+  platform?: string;
+  publishAt?: string;
+  adBudget?: number;
+  audienceNotes?: string;
+  status?: string;
+};
+
+export async function updateSchedule(id: string, patch: UpdateScheduleInput) {
+  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.platform !== undefined) payload["platform"] = patch.platform;
+  if (patch.publishAt !== undefined) payload["publish_at"] = patch.publishAt;
+  if (patch.adBudget !== undefined) payload["ad_budget"] = patch.adBudget;
+  if (patch.audienceNotes !== undefined) payload["audience_notes"] = patch.audienceNotes;
+  if (patch.status !== undefined) payload["status"] = patch.status;
+
+  const { data, error } = await supabase
+    .from("schedules")
+    .update(payload)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as Schedule;
+}
+
+export async function deleteSchedule(id: string) {
+  const { error } = await supabase.from("schedules").delete().eq("id", id);
+  if (error) throw error;
+  return id;
+}
+
+/** Marks a schedule live and pushes its linked video to published. */
+export async function publishSchedule(schedule: Schedule) {
+  const updated = await updateSchedule(schedule.id, {
+    status: "published",
+    publishAt: new Date().toISOString(),
+  });
+  if (schedule.content_item_id) {
+    await supabase
+      .from("content_items")
+      .update({ status: "published", updated_at: new Date().toISOString() })
+      .eq("id", schedule.content_item_id);
+  }
+  return updated;
+}
+
+/** Any scheduled post whose time has passed goes live — keeps the calendar honest. */
+export async function publishDueSchedules(schedules: Schedule[]) {
+  const now = Date.now();
+  const due = schedules.filter(
+    (item) => item.status === "scheduled" && new Date(item.publish_at).getTime() <= now,
+  );
+  for (const item of due) await publishSchedule(item);
+  return due.length;
+}
+
+/** Simple, transparent projection so budgets have a visible consequence. */
+export function estimateReach(adBudget: number, platform: string) {
+  const cpm = platform === "instagram" ? 62 : 48; // ₹ per 1000 impressions
+  const reach = Math.round((safe(adBudget) / cpm) * 1000);
+  const clicks = Math.round(reach * 0.021);
+  const leads = Math.round(clicks * 0.14);
+  return { reach, clicks, leads };
+}
+
+function safe(value: number | null | undefined) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+export function toLocalInputValue(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Best posting windows by platform, used for the one-tap suggestion. */
+export function suggestedSlot(platform: string, from = new Date()) {
+  const hour = platform === "instagram" ? 19 : 13;
+  const slot = new Date(from);
+  slot.setHours(hour, 30, 0, 0);
+  if (slot.getTime() <= from.getTime()) slot.setDate(slot.getDate() + 1);
+  return slot;
+}
+
+
 export async function simulateLead(input: SimulatedLeadInput) {
   const tier = input.tier === "auto" ? scoreToTier(input.score) : input.tier;
   const { data: lead, error: leadError } = await supabase
