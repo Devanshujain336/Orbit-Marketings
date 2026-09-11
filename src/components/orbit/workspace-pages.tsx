@@ -261,7 +261,7 @@ function BusinessSummary({ business }: { business?: Business | null | undefined 
         <div className="flex flex-wrap gap-2">
           {vibe.length ? vibe.map((item) => <Chip key={item}>{item}</Chip>) : <Chip>Awaiting scan</Chip>}
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <MiniMetric icon={Megaphone} label="Offer" value={business?.offer ?? "Not set"} />
           <MiniMetric icon={Target} label="Audience" value={business?.audience ?? "Not set"} />
           <MiniMetric icon={Radio} label="Tone" value={business?.tone ?? "Direct"} />
@@ -281,7 +281,7 @@ export function DashboardPage() {
   return (
     <AppShell title={`Good morning, ${business.data?.name ?? "Founder"}`} subtitle="Live view of content, distribution, and lead triage across your workspace.">
       <div className="space-y-6">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatTile label="Hot leads" value={leadScore.high} hint={`${leadScore.open} open conversations`} tone="signal" />
           <StatTile label="Avg AI score" value={leadScore.averageScore} unit="/100" hint="Qualification confidence" tone="cool" />
           <StatTile label="Ready videos" value={readyVideos} hint="Ready or scheduled" tone="heat" />
@@ -742,7 +742,7 @@ export function ContentPage() {
         </div>
 
         <Panel title="Shoot status trail">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {(shoots.data ?? []).map((shoot) => (
               <div key={shoot.id} className="rounded-md border border-border bg-secondary/40 p-4">
                 <div className="flex items-center justify-between gap-2">
@@ -894,7 +894,7 @@ export function DistributionPage() {
       }
     >
       <div className="space-y-6">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatTile label="Queued" value={totals.queued} tone="heat" hint="Waiting on their slot" />
           <StatTile label="Published" value={totals.published} tone="signal" hint="Already live" />
           <StatTile label="Boost spend" value={rupees(totals.spend)} hint="Across the calendar" />
@@ -1123,7 +1123,7 @@ export function LeadsPage() {
   return (
     <AppShell title="Lead qualification" subtitle="Every inbound DM gets an instant reply, score, reason, and founder-ready tier.">
       <div className="space-y-6">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatTile label="Open threads" value={stats.open} tone="cool" />
           <StatTile label="High value" value={stats.high} tone="signal" />
           <StatTile label="Won" value={stats.won} tone="heat" />
@@ -1143,7 +1143,7 @@ export function LeadsPage() {
         </div>
 
         <Panel title="Simulate inbound lead">
-          <div className="grid gap-4 lg:grid-cols-[1fr_1fr_0.5fr_auto]">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_0.5fr_auto] lg:gap-4">
             <Field label="Name"><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></Field>
             <Field label="Handle"><Input value={form.handle} onChange={(event) => setForm((current) => ({ ...current, handle: event.target.value }))} /></Field>
             <Field label="Score"><Input type="number" min={1} max={100} value={form.score} onChange={(event) => setForm((current) => ({ ...current, score: Number(event.target.value) }))} /></Field>
@@ -1223,7 +1223,7 @@ export function HomePreviewStats() {
   const { content, schedules, leads } = useOrbitData();
   const stats = leadStats(leads.data ?? []);
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       <MiniMetric icon={Activity} label="Campaign assets" value={`${content.data?.length ?? 0} live`} />
       <MiniMetric icon={Timer} label="Scheduled boosts" value={`${schedules.data?.length ?? 0} queued`} />
       <MiniMetric icon={Flame} label="Hot leads" value={`${stats.high} active`} />
