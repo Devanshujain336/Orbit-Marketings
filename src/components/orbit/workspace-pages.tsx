@@ -261,7 +261,7 @@ function BusinessSummary({ business }: { business?: Business | null | undefined 
         <div className="flex flex-wrap gap-2">
           {vibe.length ? vibe.map((item) => <Chip key={item}>{item}</Chip>) : <Chip>Awaiting scan</Chip>}
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <MiniMetric icon={Megaphone} label="Offer" value={business?.offer ?? "Not set"} />
           <MiniMetric icon={Target} label="Audience" value={business?.audience ?? "Not set"} />
           <MiniMetric icon={Radio} label="Tone" value={business?.tone ?? "Direct"} />
@@ -281,7 +281,7 @@ export function DashboardPage() {
   return (
     <AppShell title={`Good morning, ${business.data?.name ?? "Founder"}`} subtitle="Live view of content, distribution, and lead triage across your workspace.">
       <div className="space-y-6">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatTile label="Hot leads" value={leadScore.high} hint={`${leadScore.open} open conversations`} tone="signal" />
           <StatTile label="Avg AI score" value={leadScore.averageScore} unit="/100" hint="Qualification confidence" tone="cool" />
           <StatTile label="Ready videos" value={readyVideos} hint="Ready or scheduled" tone="heat" />
@@ -675,11 +675,11 @@ export function ContentPage() {
 
         <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
           <Panel title="Pipeline board" bodyClassName="p-3 overflow-hidden">
-            <div className="flex gap-3 overflow-x-auto pb-4 snap-x xl:grid xl:grid-cols-5 xl:overflow-visible xl:pb-0 xl:snap-none">
+            <div className="flex items-start gap-3 overflow-x-auto pb-4 snap-x xl:grid xl:grid-cols-5 xl:items-stretch xl:overflow-visible xl:pb-0 xl:snap-none">
               {CONTENT_STAGES.map((stage) => {
                 const items = (content.data ?? []).filter((item) => item.status === stage.key);
                 return (
-                  <div key={stage.key} className="min-h-72 w-[280px] shrink-0 snap-start rounded-md border border-border bg-background/60 p-3 xl:w-auto">
+                  <div key={stage.key} className="min-h-44 w-[240px] shrink-0 snap-start rounded-md border border-border bg-background/60 p-3 sm:min-h-72 sm:w-[280px] xl:w-auto">
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <p className="label-xs">{stage.label}</p>
                       <span className="num text-xs text-muted-foreground">{items.length}</span>
@@ -742,7 +742,7 @@ export function ContentPage() {
         </div>
 
         <Panel title="Shoot status trail">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {(shoots.data ?? []).map((shoot) => (
               <div key={shoot.id} className="rounded-md border border-border bg-secondary/40 p-4">
                 <div className="flex items-center justify-between gap-2">
@@ -894,7 +894,7 @@ export function DistributionPage() {
       }
     >
       <div className="space-y-6">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatTile label="Queued" value={totals.queued} tone="heat" hint="Waiting on their slot" />
           <StatTile label="Published" value={totals.published} tone="signal" hint="Already live" />
           <StatTile label="Boost spend" value={rupees(totals.spend)} hint="Across the calendar" />
@@ -973,7 +973,7 @@ export function DistributionPage() {
               action={
                 <div className="flex items-center gap-2">
                   <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                    <SelectTrigger className="h-8 w-[130px]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 w-[112px] sm:w-[130px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All platforms</SelectItem>
                       <SelectItem value="instagram">Instagram</SelectItem>
@@ -1005,7 +1005,7 @@ export function DistributionPage() {
                         setForm((current) => ({ ...current, publishAt: toLocalInputValue(target) }));
                       }}
                       className={cn(
-                        "min-h-16 rounded-md border border-border/60 p-1.5 text-left transition-colors hover:border-signal/50",
+                        "min-h-14 rounded-md border border-border/60 p-1 text-left sm:min-h-16 sm:p-1.5 transition-colors hover:border-signal/50",
                         !inMonth && "opacity-40",
                         isSelected && "border-signal bg-signal/10",
                       )}
@@ -1123,7 +1123,7 @@ export function LeadsPage() {
   return (
     <AppShell title="Lead qualification" subtitle="Every inbound DM gets an instant reply, score, reason, and founder-ready tier.">
       <div className="space-y-6">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatTile label="Open threads" value={stats.open} tone="cool" />
           <StatTile label="High value" value={stats.high} tone="signal" />
           <StatTile label="Won" value={stats.won} tone="heat" />
@@ -1143,7 +1143,7 @@ export function LeadsPage() {
         </div>
 
         <Panel title="Simulate inbound lead">
-          <div className="grid gap-4 lg:grid-cols-[1fr_1fr_0.5fr_auto]">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_0.5fr_auto] lg:gap-4">
             <Field label="Name"><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></Field>
             <Field label="Handle"><Input value={form.handle} onChange={(event) => setForm((current) => ({ ...current, handle: event.target.value }))} /></Field>
             <Field label="Score"><Input type="number" min={1} max={100} value={form.score} onChange={(event) => setForm((current) => ({ ...current, score: Number(event.target.value) }))} /></Field>
@@ -1223,7 +1223,7 @@ export function HomePreviewStats() {
   const { content, schedules, leads } = useOrbitData();
   const stats = leadStats(leads.data ?? []);
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       <MiniMetric icon={Activity} label="Campaign assets" value={`${content.data?.length ?? 0} live`} />
       <MiniMetric icon={Timer} label="Scheduled boosts" value={`${schedules.data?.length ?? 0} queued`} />
       <MiniMetric icon={Flame} label="Hot leads" value={`${stats.high} active`} />
