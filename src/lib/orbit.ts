@@ -287,7 +287,9 @@ export type UpdateScheduleInput = {
 };
 
 export async function updateSchedule(id: string, patch: UpdateScheduleInput) {
-  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  const payload: Database["public"]["Tables"]["schedules"]["Update"] = {
+    updated_at: new Date().toISOString(),
+  };
   if (patch.platform !== undefined) payload["platform"] = patch.platform;
   if (patch.publishAt !== undefined) payload["publish_at"] = patch.publishAt;
   if (patch.adBudget !== undefined) payload["ad_budget"] = patch.adBudget;
