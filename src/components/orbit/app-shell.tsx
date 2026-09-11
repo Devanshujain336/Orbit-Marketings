@@ -84,15 +84,21 @@ export function AppShell({
         </aside>
 
         <main className="min-w-0 flex-1">
-          <header className="sticky top-0 z-20 border-b border-border bg-background/85 px-6 py-4 backdrop-blur-md">
-            <div className="flex flex-wrap items-end justify-between gap-4">
+          <header className="sticky top-0 z-20 border-b border-border bg-background/85 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
               <div className="min-w-0">
-                <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">{title}</h1>
+                <div className="flex items-center gap-2 lg:hidden">
+                  <OrbitLogoMark size={20} className="shrink-0 text-primary" />
+                  <span className="font-display text-xs font-bold tracking-[0.18em] uppercase">Orbit</span>
+                </div>
+                <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-foreground sm:mt-0 sm:text-3xl">
+                  {title}
+                </h1>
                 {subtitle ? (
-                  <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>
+                  <p className="mt-1 max-w-2xl text-[13px] text-muted-foreground sm:text-sm">{subtitle}</p>
                 ) : null}
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                 <p className="hidden text-sm text-muted-foreground sm:block">
                   {new Intl.DateTimeFormat("en-US", { weekday: "long", month: "short", day: "numeric" }).format(new Date())}
                 </p>
@@ -102,20 +108,24 @@ export function AppShell({
             <SpeedLine />
           </header>
 
-          <nav className="flex gap-1 overflow-x-auto border-b border-border px-3 py-2 lg:hidden">
+          <nav className="sticky top-[var(--mobile-nav-top,0px)] z-10 flex snap-x gap-1 overflow-x-auto border-b border-border bg-background/90 px-3 py-2 backdrop-blur-md lg:hidden">
             {nav.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
-                className="shrink-0 rounded-sm px-3 py-1.5 text-xs text-muted-foreground"
-                activeProps={{ className: "bg-accent !text-accent-foreground" }}
+                className="flex shrink-0 snap-start items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-xs text-muted-foreground"
+                activeProps={{ className: "!border-signal/30 bg-accent !text-accent-foreground font-semibold" }}
               >
+                <item.icon className="size-3.5 shrink-0" />
                 {item.label}
+                {item.to === "/leads" && hotLeads > 0 ? (
+                  <span className="num rounded-full bg-signal/20 px-1.5 text-[10px] text-signal">{hotLeads}</span>
+                ) : null}
               </Link>
             ))}
           </nav>
 
-          <div className="grid-asphalt min-h-[calc(100vh-96px)] px-5 py-6">{children}</div>
+          <div className="grid-asphalt min-h-[calc(100vh-96px)] px-4 py-5 sm:px-5 sm:py-6">{children}</div>
         </main>
       </div>
     </div>

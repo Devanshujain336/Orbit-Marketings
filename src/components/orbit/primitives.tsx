@@ -53,14 +53,14 @@ export function StatTile({
           ? "text-cool bg-gradient-to-br from-cool/10 to-transparent border-cool/20"
           : "text-foreground bg-gradient-to-br from-secondary to-transparent";
   return (
-    <div className={cn("panel panel-hover relative overflow-hidden p-4", toneClass)}>
+    <div className={cn("panel panel-hover relative overflow-hidden p-3 sm:p-4", toneClass)}>
       <div className="absolute inset-x-0 top-0 h-px speed-line opacity-40" />
-      <p className="label-xs !text-inherit opacity-80">{label}</p>
-      <p className="num mt-3 text-3xl font-semibold">
+      <p className="label-xs !text-inherit truncate opacity-80">{label}</p>
+      <p className="num mt-2 text-2xl font-semibold sm:mt-3 sm:text-3xl">
         {value}
-        {unit ? <span className="ml-1 text-base opacity-60">{unit}</span> : null}
+        {unit ? <span className="ml-1 text-sm opacity-60 sm:text-base">{unit}</span> : null}
       </p>
-      {hint ? <p className="mt-1 text-xs opacity-70">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-[11px] opacity-70 sm:text-xs">{hint}</p> : null}
     </div>
   );
 }
