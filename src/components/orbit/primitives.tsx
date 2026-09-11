@@ -21,7 +21,7 @@ export function Panel({
   return (
     <section className={cn("panel overflow-hidden", className)}>
       {title ? (
-        <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-3 sm:gap-3 sm:px-4">
           <h2 className="label-xs text-foreground/80">{title}</h2>
           {action}
         </header>

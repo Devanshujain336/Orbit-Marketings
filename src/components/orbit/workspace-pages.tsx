@@ -973,7 +973,7 @@ export function DistributionPage() {
               action={
                 <div className="flex items-center gap-2">
                   <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                    <SelectTrigger className="h-8 w-[130px]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 w-[112px] sm:w-[130px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All platforms</SelectItem>
                       <SelectItem value="instagram">Instagram</SelectItem>
@@ -1005,7 +1005,7 @@ export function DistributionPage() {
                         setForm((current) => ({ ...current, publishAt: toLocalInputValue(target) }));
                       }}
                       className={cn(
-                        "min-h-16 rounded-md border border-border/60 p-1.5 text-left transition-colors hover:border-signal/50",
+                        "min-h-14 rounded-md border border-border/60 p-1 text-left sm:min-h-16 sm:p-1.5 transition-colors hover:border-signal/50",
                         !inMonth && "opacity-40",
                         isSelected && "border-signal bg-signal/10",
                       )}
