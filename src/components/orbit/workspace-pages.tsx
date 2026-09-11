@@ -679,7 +679,7 @@ export function ContentPage() {
               {CONTENT_STAGES.map((stage) => {
                 const items = (content.data ?? []).filter((item) => item.status === stage.key);
                 return (
-                  <div key={stage.key} className="min-h-72 w-[280px] shrink-0 snap-start rounded-md border border-border bg-background/60 p-3 xl:w-auto">
+                  <div key={stage.key} className="min-h-44 w-[240px] shrink-0 snap-start rounded-md border border-border bg-background/60 p-3 sm:min-h-72 sm:w-[280px] xl:w-auto">
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <p className="label-xs">{stage.label}</p>
                       <span className="num text-xs text-muted-foreground">{items.length}</span>
