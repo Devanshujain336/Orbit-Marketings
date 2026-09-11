@@ -139,8 +139,10 @@ function ScrapePage() {
         audience: result.targetAudience,
         offer: result.summary,
         tone: result.vibeKeywords.join(", "),
+        positioning: result.summary,
         summary: result.summary,
         brandIdentity: result.brandIdentity,
+        vibeKeywords: result.vibeKeywords,
         videoAngles: result.videoAngles.map((angle) => angle.hook),
         qualifyingQuestions: result.qualifyingQuestions,
       });

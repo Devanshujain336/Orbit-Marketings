@@ -7,6 +7,7 @@ import {
   CalendarClock,
   Inbox,
   Settings2,
+  ScanSearch,
 } from "lucide-react";
 import { OrbitLogoMark } from "@/components/orbit/orbit-logo";
 import type { ReactNode } from "react";
@@ -16,7 +17,8 @@ import { SpeedLine } from "@/components/orbit/primitives";
 
 const nav = [
   { to: "/dashboard", label: "Pit wall", icon: Gauge },
-  { to: "/onboarding", label: "Onboarding", icon: Rocket },
+  { to: "/onboarding", label: "Onboarding & Brand", icon: Rocket },
+  { to: "/scrape", label: "Brand Scan", icon: ScanSearch },
   { to: "/content", label: "Content", icon: Film },
   { to: "/distribution", label: "Distribution", icon: CalendarClock },
   { to: "/leads", label: "Leads", icon: Inbox },

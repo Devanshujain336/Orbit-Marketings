@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 export const DEMO_BUSINESS_ID = "11111111-1111-1111-1111-111111111111";
 
@@ -35,6 +35,7 @@ export type BrandProfileInput = {
   audience?: string;
   offer?: string;
   tone?: string;
+  positioning?: string;
   /** From Gemini AI: full summary / positioning paragraph */
   summary?: string;
   /** From Gemini AI: brand identity / voice */
@@ -43,6 +44,10 @@ export type BrandProfileInput = {
   videoAngles?: string[];
   /** From Gemini AI: 2-3 qualifying questions */
   qualifyingQuestions?: string[];
+  vibeKeywords?: string[];
+  palette?: unknown;
+  autoReplyTone?: string;
+  autoReplyTemplate?: string;
 };
 
 export type CreateContentInput = {
@@ -50,6 +55,11 @@ export type CreateContentInput = {
   path: "ai" | "offline";
   pattern?: string;
   notes?: string;
+  hook?: string;
+  script?: string;
+  caption?: string;
+  hashtags?: string[];
+  status?: string;
 };
 
 export type CreateShootInput = {
@@ -176,41 +186,63 @@ export async function fetchLeadMessages(leadId: string) {
 }
 
 export async function saveBrandProfile(input: BrandProfileInput) {
-  // Build vibe_keywords: video angles (if from AI) or fallback tags
-  const vibeKeywords: string[] = input.videoAngles && input.videoAngles.length > 0
-    ? input.videoAngles
-    : [input.industry, input.tone, "fast response", "premium leads"].filter(Boolean) as string[];
+  // Fetch current business record first to preserve fields not being modified
+  const current = await fetchBusiness();
 
-  // Build positioning: AI summary if available, else a generated line
-  const positioning = input.summary
-    ? input.summary
-    : `${input.name} helps ${input.audience || "growth teams"} move faster from attention to qualified demand.`;
+  // Positioning: input.positioning > input.summary > current.positioning > generated line
+  const positioning = input.positioning && input.positioning.trim().length > 0
+    ? input.positioning.trim()
+    : input.summary && input.summary.trim().length > 0
+      ? input.summary.trim()
+      : current?.positioning && current.positioning.trim().length > 0
+        ? current.positioning.trim()
+        : `${input.name} helps ${input.audience || "growth teams"} move faster from attention to qualified demand.`;
+
+  // Build vibe_keywords: intelligently merge DNA chips and video angles
+  let vibeKeywords: string[] = current?.vibe_keywords ?? [];
+  if (input.videoAngles && input.videoAngles.length > 0) {
+    const chips = input.vibeKeywords && input.vibeKeywords.length > 0
+      ? input.vibeKeywords
+      : (current?.vibe_keywords ?? []).filter((k) => k.length <= 30);
+    vibeKeywords = [...chips, ...input.videoAngles];
+  } else if (input.vibeKeywords && input.vibeKeywords.length > 0) {
+    const existingAngles = (current?.vibe_keywords ?? []).filter((k) => k.length > 30);
+    vibeKeywords = [...input.vibeKeywords, ...existingAngles];
+  }
+
+  if (vibeKeywords.length === 0) {
+    vibeKeywords = [input.industry, input.tone, "fast response", "premium leads"].filter(Boolean) as string[];
+  }
 
   // Store qualifying questions as JSON in auto_reply_template
-  const autoReplyTemplate = input.qualifyingQuestions && input.qualifyingQuestions.length > 0
-    ? JSON.stringify(input.qualifyingQuestions)
-    : null;
+  let autoReplyTemplate: string | null = current?.auto_reply_template ?? null;
+  if (input.qualifyingQuestions && input.qualifyingQuestions.length > 0) {
+    autoReplyTemplate = JSON.stringify(input.qualifyingQuestions);
+  } else if (input.autoReplyTemplate !== undefined) {
+    autoReplyTemplate = input.autoReplyTemplate;
+  }
 
   const { data, error } = await supabase
     .from("businesses")
     .update({
       name: input.name,
-      website: input.website ?? null,
-      industry: input.brandIdentity ?? input.industry ?? null,
-      audience: input.audience ?? null,
-      offer: input.offer ?? null,
-      tone: input.tone ?? null,
+      website: input.website ?? current?.website ?? null,
+      industry: input.brandIdentity ?? input.industry ?? current?.industry ?? null,
+      audience: input.audience ?? current?.audience ?? null,
+      offer: input.offer ?? current?.offer ?? null,
+      tone: input.tone ?? current?.tone ?? null,
       positioning,
       vibe_keywords: vibeKeywords,
       auto_reply_template: autoReplyTemplate,
-      palette: {
+      auto_reply_tone: input.autoReplyTone ?? current?.auto_reply_tone ?? "fast, friendly, direct",
+      palette: (input.palette ?? current?.palette ?? {
         base: "asphalt",
         signal: "electric lime",
         heat: "amber boost",
         motion: "fastlane telemetry",
-      },
+      }) as Json,
       analyzed_at: new Date().toISOString(),
-      onboarded_at: new Date().toISOString(),
+      onboarded_at: current?.onboarded_at ?? new Date().toISOString(),
     })
     .eq("id", DEMO_BUSINESS_ID)
     .select("*")
@@ -229,16 +261,73 @@ export async function createContentItem(input: CreateContentInput, business?: Bu
       path: input.path,
       pattern: input.pattern ?? null,
       notes: input.notes ?? null,
-      status: input.path === "ai" ? "ready" : "in_production",
-      hook: draft?.hook ?? null,
-      script: draft?.script ?? null,
-      caption: draft?.caption ?? null,
-      hashtags: draft?.hashtags ?? [],
+      status: input.status ?? (input.path === "ai" ? "ready" : "in_production"),
+      hook: input.hook ?? draft?.hook ?? null,
+      script: input.script ?? draft?.script ?? null,
+      caption: input.caption ?? draft?.caption ?? null,
+      hashtags: input.hashtags ?? draft?.hashtags ?? [],
     })
     .select("*")
     .single();
   if (error) throw error;
   return data as ContentItem;
+}
+
+export async function updateContentItemStatus(id: string, status: string) {
+  const { data, error } = await supabase
+    .from("content_items")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as ContentItem;
+}
+
+export async function deleteContentItem(id: string) {
+  const { error } = await supabase
+    .from("content_items")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+  return true;
+}
+
+export async function sendLeadMessage(leadId: string, body: string, automated = false) {
+  const { data, error } = await supabase
+    .from("lead_messages")
+    .insert({
+      lead_id: leadId,
+      direction: "outbound",
+      body,
+      automated,
+    })
+    .select("*")
+    .single();
+  if (error) throw error;
+
+  await supabase
+    .from("leads")
+    .update({ last_message_at: new Date().toISOString() })
+    .eq("id", leadId);
+
+  return data as LeadMessage;
+}
+
+export async function updateBusinessChannels(patch: { instagram?: boolean; facebook?: boolean; whatsapp?: boolean }) {
+  const updates: Database["public"]["Tables"]["businesses"]["Update"] = {};
+  if (typeof patch.instagram === "boolean") updates.instagram_connected = patch.instagram;
+  if (typeof patch.facebook === "boolean") updates.facebook_connected = patch.facebook;
+  if (typeof patch.whatsapp === "boolean") updates.whatsapp_connected = patch.whatsapp;
+
+  const { data, error } = await supabase
+    .from("businesses")
+    .update(updates)
+    .eq("id", DEMO_BUSINESS_ID)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as Business;
 }
 
 export async function createShootRequest(input: CreateShootInput) {

@@ -5,20 +5,29 @@ import {
   ArrowRight,
   Bot,
   CalendarClock,
+  Check,
   CheckCircle2,
   CircleDollarSign,
   Clapperboard,
+  Copy,
+  ExternalLink,
   Flame,
   Gauge,
+  Globe,
   Inbox,
+  Loader2,
   Megaphone,
   MessageCircle,
+  Plus,
   Radio,
+  RefreshCw,
   Rocket,
+  Send,
   Settings2,
   Sparkles,
   Target,
   Timer,
+  Trash2,
   Trophy,
   Zap,
 } from "lucide-react";
@@ -29,6 +38,14 @@ import { Chip, EmptyState, Panel, SpeedLine, StatTile, TierBadge } from "@/compo
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -43,12 +60,16 @@ import {
   createContentItem,
   createSchedule,
   createShootRequest,
+  deleteContentItem,
   deleteSchedule,
   estimateReach,
   publishDueSchedules,
   publishSchedule,
+  sendLeadMessage,
   suggestedSlot,
   toLocalInputValue,
+  updateBusinessChannels,
+  updateContentItemStatus,
   updateSchedule,
   fetchBusiness,
   fetchContentItems,
@@ -68,6 +89,7 @@ import {
   type Schedule,
 } from "@/lib/orbit";
 import { cn } from "@/lib/utils";
+import { analyzeBrand } from "@/lib/orbit-ai.functions";
 
 function useOrbitData() {
   const business = useQuery({ queryKey: ["business"], queryFn: fetchBusiness });
@@ -183,6 +205,7 @@ function LeadThread({ lead }: { lead: Lead | undefined }) {
     queryFn: () => fetchLeadMessages(lead?.id ?? ""),
     enabled: Boolean(lead?.id),
   });
+  const [replyText, setReplyText] = useState("");
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => updateLeadStatus(id, status),
     onSuccess: () => {
@@ -192,9 +215,26 @@ function LeadThread({ lead }: { lead: Lead | undefined }) {
     onError: () => toast.error("Could not update lead"),
   });
 
+  const sendMutation = useMutation({
+    mutationFn: (body: string) => (lead ? sendLeadMessage(lead.id, body, false) : Promise.reject(new Error("No lead selected"))),
+    onSuccess: () => {
+      if (lead) queryClient.invalidateQueries({ queryKey: ["lead-messages", lead.id] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setReplyText("");
+      toast.success("Reply sent to buyer");
+    },
+    onError: () => toast.error("Could not send reply"),
+  });
+
   if (!lead) {
     return <EmptyState title="No lead selected" hint="Pick a conversation from the stack." />;
   }
+
+  const QUICK_REPLIES = [
+    "Confirmed! What's your target launch date and monthly budget?",
+    "Sounds like a great fit. Would a quick 15-min walkthrough this Thursday work?",
+    "We can handle scripting, production, and instant lead triage for this.",
+  ];
 
   return (
     <div className="flex min-h-[560px] flex-col">
@@ -210,38 +250,70 @@ function LeadThread({ lead }: { lead: Lead | undefined }) {
         </div>
       </div>
 
-      <div className="flex-1 space-y-3 p-4">
+      <div className="flex-1 space-y-3 p-4 overflow-y-auto max-h-[380px]">
         {(messages.data ?? []).map((message) => (
           <div
             key={message.id}
             className={cn(
               "max-w-[82%] rounded-md border border-border p-3 text-sm",
-              message.direction === "outbound" ? "ml-auto bg-primary/15" : "bg-secondary/70",
+              message.direction === "outbound" ? "ml-auto bg-primary/15 border-primary/30 text-foreground" : "bg-secondary/70",
             )}
           >
-            <p>{message.body}</p>
-            <p className="label-xs mt-2">{message.automated ? "Auto reply" : humanize(message.direction)}</p>
+            <p className="whitespace-pre-wrap leading-relaxed">{message.body}</p>
+            <p className="label-xs mt-2 text-[10px] text-muted-foreground">{message.automated ? "Auto reply" : humanize(message.direction)}</p>
           </div>
         ))}
         {messages.isLoading ? <p className="text-sm text-muted-foreground">Loading thread…</p> : null}
       </div>
 
-      <div className="border-t border-border p-4">
-        <Textarea
-          readOnly
-          value="Thanks — this looks like a strong fit. I can send pricing and open slots, or route this to the founder now."
-          className="min-h-20 bg-secondary/40"
-        />
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button onClick={() => statusMutation.mutate({ id: lead.id, status: "won" })} disabled={statusMutation.isPending}>
-            <Trophy className="size-4" /> Mark won
+      <div className="border-t border-border p-4 bg-card/40 space-y-3">
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK_REPLIES.map((quick, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setReplyText(quick)}
+              className="text-[11px] rounded-full border border-border bg-secondary/60 px-2.5 py-1 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+            >
+              + {quick.slice(0, 36)}…
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            placeholder="Type outbound reply or prompt to this lead…"
+            className="min-h-16 bg-background resize-none text-sm"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && replyText.trim()) {
+                e.preventDefault();
+                sendMutation.mutate(replyText.trim());
+              }
+            }}
+          />
+          <Button
+            type="button"
+            className="self-end h-16 px-4"
+            disabled={!replyText.trim() || sendMutation.isPending}
+            onClick={() => sendMutation.mutate(replyText.trim())}
+          >
+            <Send className="size-4" />
           </Button>
-          <Button variant="secondary" onClick={() => statusMutation.mutate({ id: lead.id, status: "qualified" })} disabled={statusMutation.isPending}>
-            <CheckCircle2 className="size-4" /> Qualify
-          </Button>
-          <Button variant="outline" onClick={() => statusMutation.mutate({ id: lead.id, status: "lost" })} disabled={statusMutation.isPending}>
-            Close out
-          </Button>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => statusMutation.mutate({ id: lead.id, status: "won" })} disabled={statusMutation.isPending}>
+              <Trophy className="size-3.5 mr-1" /> Mark won
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => statusMutation.mutate({ id: lead.id, status: "qualified" })} disabled={statusMutation.isPending}>
+              <CheckCircle2 className="size-3.5 mr-1" /> Qualify
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => statusMutation.mutate({ id: lead.id, status: "lost" })} disabled={statusMutation.isPending}>
+              Close out
+            </Button>
+          </div>
+          <span className="text-[11px] text-muted-foreground">Press Enter to send</span>
         </div>
       </div>
     </div>
@@ -361,6 +433,93 @@ export function DashboardPage() {
   );
 }
 
+const STARTUP_PRESETS = [
+  {
+    label: "B2B SaaS",
+    name: "PulseScale",
+    website: "https://pulsescale.io",
+    industry: "Cloud Infrastructure & SRE",
+    audience: "Engineering leaders, VP of Eng, and DevOps teams at scaling startups",
+    offer: "Zero-latency Kubernetes auto-scaling and cost anomaly defense that cuts AWS bills by 42% in 24 hours.",
+    tone: "technical, confident, outcome-led",
+    positioning: "PulseScale cuts cloud infrastructure waste by 42% in 24 hours with autonomous Kubernetes auto-scaling built for high-growth engineering teams.",
+    vibeKeywords: ["autonomous", "zero-latency", "cost-defense", "engineered", "high-velocity"],
+    videoAngles: [
+      "The exact query that costs your startup $12,000 extra on AWS each month",
+      "POV: DevOps engineer sleeping through a Black Friday traffic surge with PulseScale",
+      "3 Kubernetes mistakes senior engineers make that burn investor capital",
+    ],
+    qualifyingQuestions: [
+      "What is your current monthly AWS or GCP cloud spend?",
+      "How many Kubernetes clusters are you currently running in production?",
+      "Are you looking to optimize costs within the next 30 days?",
+    ],
+  },
+  {
+    label: "Creative Agency",
+    name: "Velocity Studio",
+    website: "https://velocity.studio",
+    industry: "Short-Form Video & Growth Marketing",
+    audience: "Funded tech founders, consumer brands, and D2C scale-ups",
+    offer: "High-retention vertical video production, scripting, and organic Meta distribution that turns viewers into inbound customers.",
+    tone: "bold, punchy, energetic, premium",
+    positioning: "Velocity Studio transforms product vision into high-retention vertical video campaigns that generate real buyer demand without endless agency handoffs.",
+    vibeKeywords: ["high-retention", "punchy", "motion-first", "conversion", "aesthetic"],
+    videoAngles: [
+      "Why your $20,000 brand video got 400 views and 0 customers",
+      "The 3-second hook structure that converted $140,000 for a bootstrapped SaaS",
+      "POV: Your DM inbox 48 hours after launching our organic video sprint",
+    ],
+    qualifyingQuestions: [
+      "What is your target monthly revenue or lead volume goal?",
+      "Do you have existing video footage or do you need on-location filming?",
+      "What timeline are you targeting for campaign launch?",
+    ],
+  },
+  {
+    label: "AI Platform",
+    name: "Orbit",
+    website: "https://orbit.ai",
+    industry: "Autonomous Growth & AI Marketing",
+    audience: "Solo founders, growth teams, and operators who need predictable customer acquisition",
+    offer: "Always-on marketing engine that creates vertical video hooks, boosts posts, and instantly qualifies buyer DMs.",
+    tone: "fast, sharp, bold, telemetry-driven",
+    positioning: "Orbit is the autonomous marketing engine for startups — turning brand DNA into high-converting video and instant lead qualification 24/7.",
+    vibeKeywords: ["autonomous", "fast-reply", "telemetry", "high-velocity", "demand-engine"],
+    videoAngles: [
+      "The reason buyers leave your site without ever sending a message",
+      "POV: your inbox after Orbit answers every buyer DM in 4 seconds",
+      "3 things Orbit does that marketing agencies charge $8,000/mo for",
+    ],
+    qualifyingQuestions: [
+      "What are you trying to fix in your lead flow in the next 30 days?",
+      "What monthly ad or media boost budget have you set aside?",
+      "Who else signs off on the decision with you?",
+    ],
+  },
+  {
+    label: "D2C Brand",
+    name: "Aura Brew",
+    website: "https://aurabrew.co",
+    industry: "Functional Beverage & Wellness",
+    audience: "Health-conscious creators, founders, and professionals seeking clean afternoon energy",
+    offer: "Organic ceremonial-grade matcha infused with lion's mane and L-theanine for 6 hours of clean, crash-free focus.",
+    tone: "warm, vibrant, mindful, aesthetic",
+    positioning: "Aura Brew powers high-focus workdays with ceremonial-grade organic adaptogenic matcha that eliminates coffee jitters and crashes.",
+    vibeKeywords: ["clean-energy", "ceremonial", "crash-free", "focus", "organic"],
+    videoAngles: [
+      "Why high-output founders are ditching their 2 PM espresso for this green tin",
+      "POV: The difference between 3 cups of coffee vs 1 scoop of Aura Brew at 3 PM",
+      "3 ingredients hiding in commercial energy drinks that ruin your sleep cycle",
+    ],
+    qualifyingQuestions: [
+      "Are you buying for personal daily use or stocking an office team?",
+      "Have you tried ceremonial Japanese matcha before?",
+      "Would you prefer a 30-day starter kit with a bamboo whisk?",
+    ],
+  },
+];
+
 export function OnboardingPage() {
   const queryClient = useQueryClient();
   const business = useQuery({ queryKey: ["business"], queryFn: fetchBusiness });
@@ -371,243 +530,591 @@ export function OnboardingPage() {
     audience: "",
     offer: "",
     tone: "",
+    positioning: "",
   });
 
-  // Sync fetched business data into form
+  const [dnaChips, setDnaChips] = useState<string[]>([]);
+  const [newChipInput, setNewChipInput] = useState("");
+  const [videoAngles, setVideoAngles] = useState<string[]>([]);
+  const [qualifyingQuestions, setQualifyingQuestions] = useState<string[]>([]);
+  const [isScanningUrl, setIsScanningUrl] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [copiedPositioning, setCopiedPositioning] = useState(false);
+
+  // Sync fetched business data into form once loaded
   useEffect(() => {
     if (business.data) {
-      setForm({
-        name: business.data.name ?? "",
-        website: business.data.website ?? "",
-        industry: business.data.industry ?? "",
-        audience: business.data.audience ?? "",
-        offer: business.data.offer ?? "",
-        tone: business.data.tone ?? "",
-      });
+      setForm((prev) => ({
+        name: prev.name || business.data?.name || "",
+        website: prev.website || business.data?.website || "",
+        industry: prev.industry || business.data?.industry || "",
+        audience: prev.audience || business.data?.audience || "",
+        offer: prev.offer || business.data?.offer || "",
+        tone: prev.tone || business.data?.tone || "",
+        positioning: prev.positioning || business.data?.positioning || "",
+      }));
+
+      // Parse qualifying questions from auto_reply_template
+      try {
+        const raw = business.data.auto_reply_template;
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setQualifyingQuestions(parsed);
+          }
+        }
+      } catch {
+        // ignore
+      }
+
+      // Video angles and DNA chips from vibe_keywords
+      const vibe = business.data.vibe_keywords ?? [];
+      const angles = vibe.filter((k) => k.length > 30);
+      const chips = vibe.filter((k) => k.length <= 30);
+      if (angles.length > 0) setVideoAngles(angles);
+      if (chips.length > 0) setDnaChips(chips);
     }
   }, [business.data]);
 
+  const handlePreset = (preset: (typeof STARTUP_PRESETS)[number]) => {
+    setForm({
+      name: preset.name,
+      website: preset.website,
+      industry: preset.industry,
+      audience: preset.audience,
+      offer: preset.offer,
+      tone: preset.tone,
+      positioning: preset.positioning,
+    });
+    setDnaChips(preset.vibeKeywords);
+    setVideoAngles(preset.videoAngles);
+    setQualifyingQuestions(preset.qualifyingQuestions);
+    toast.success(`Loaded preset: ${preset.label}`);
+  };
+
+  const handleQuickScan = async () => {
+    const target = form.website.trim();
+    if (!target) {
+      toast.error("Please enter a website URL to scan");
+      return;
+    }
+    setIsScanningUrl(true);
+    try {
+      const res = await fetch("/api/scrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: target }),
+      });
+      const intel = await res.json();
+      if (!res.ok || intel.error) throw new Error(intel.error || "Could not read that site");
+
+      setForm((prev) => ({
+        ...prev,
+        name: intel.site?.siteName || prev.name || intel.site?.domain || "My Brand",
+        website: intel.site?.url || target,
+        industry: intel.brandIdentity || prev.industry,
+        audience: intel.targetAudience || prev.audience,
+        offer: intel.summary || prev.offer,
+        tone: (intel.vibeKeywords || []).slice(0, 3).join(", ") || prev.tone,
+        positioning: intel.summary || prev.positioning,
+      }));
+
+      if (intel.vibeKeywords?.length) {
+        setDnaChips(intel.vibeKeywords.slice(0, 6));
+      }
+      if (intel.videoAngles?.length) {
+        setVideoAngles(intel.videoAngles.map((a: { hook?: string } | string) => (typeof a === "string" ? a : a.hook || "")));
+      }
+      if (intel.qualifyingQuestions?.length) {
+        setQualifyingQuestions(intel.qualifyingQuestions.slice(0, 3));
+      }
+      toast.success("Website analyzed! Positioning, hooks, and buyer profile populated.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to scan website");
+    } finally {
+      setIsScanningUrl(false);
+    }
+  };
+
+  const handleGeneratePositioning = async () => {
+    setIsGeneratingAI(true);
+    try {
+      const data = await analyzeBrand({
+        data: {
+          name: form.name.trim() || "My Startup",
+          website: form.website || "",
+          industry: form.industry || "",
+          audience: form.audience || "",
+          offer: form.offer || "",
+          tone: form.tone || "",
+        },
+      });
+
+      setForm((prev) => ({
+        ...prev,
+        positioning: data.positioning || prev.positioning,
+        industry: prev.industry || data.brand_identity || prev.industry,
+        tone: prev.tone || data.tone || prev.tone,
+      }));
+
+      if (data.vibe_keywords?.length) {
+        setDnaChips(data.vibe_keywords.slice(0, 6));
+      }
+      if (data.video_angles?.length) {
+        setVideoAngles(data.video_angles);
+      }
+      if (data.qualifying_questions?.length) {
+        setQualifyingQuestions(data.qualifying_questions);
+      }
+      toast.success("AI Positioning & Video Hooks generated!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not generate positioning");
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
+  const handleAddChip = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && newChipInput.trim()) {
+      e.preventDefault();
+      const val = newChipInput.trim().toLowerCase();
+      if (!dnaChips.includes(val)) {
+        setDnaChips((c) => [...c, val]);
+      }
+      setNewChipInput("");
+    }
+  };
+
+  const handleRemoveChip = (chipToRemove: string) => {
+    setDnaChips((c) => c.filter((chip) => chip !== chipToRemove));
+  };
+
+  const handlePushAngleToPipeline = async (angle: string, index: number) => {
+    try {
+      await createContentItem({
+        title: `${form.name || "Brand"} hook #${index + 1}`,
+        path: "ai",
+        pattern: "hook_problem_proof",
+        hook: angle,
+        notes: `Extracted from AI Brand Positioning on ${new Date().toLocaleDateString()}`,
+        status: "ready",
+      }, business.data);
+      queryClient.invalidateQueries({ queryKey: ["content-items"] });
+      toast.success(`Added Hook #${index + 1} to your Content Pipeline!`);
+    } catch {
+      toast.error("Could not add to pipeline");
+    }
+  };
+
+  const copyPositioning = () => {
+    if (!form.positioning) return;
+    void navigator.clipboard.writeText(form.positioning);
+    setCopiedPositioning(true);
+    toast.success("Positioning statement copied");
+    setTimeout(() => setCopiedPositioning(false), 2000);
+  };
+
   const saveMutation = useMutation({
-    mutationFn: () => saveBrandProfile(form),
+    mutationFn: () =>
+      saveBrandProfile({
+        name: form.name.trim() || "Orbit Brand",
+        website: form.website.trim(),
+        industry: form.industry.trim(),
+        audience: form.audience.trim(),
+        offer: form.offer.trim(),
+        tone: form.tone.trim(),
+        positioning: form.positioning.trim(),
+        vibeKeywords: dnaChips,
+        videoAngles: videoAngles,
+        qualifyingQuestions: qualifyingQuestions,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["business"] });
-      toast.success("Brand profile saved");
+      toast.success("Brand profile & positioning saved successfully!");
     },
-    onError: () => toast.error("Could not save brand profile"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save brand profile"),
   });
 
-  // Parse qualifying questions stored as JSON in auto_reply_template
-  const qualifyingQuestions: string[] = (() => {
-    try {
-      const raw = business.data?.auto_reply_template;
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  })();
-
-  // Video angles stored in vibe_keywords (if they look like sentences)
-  const vibeKeywords = business.data?.vibe_keywords ?? [];
-  const videoAngles = vibeKeywords.filter((k) => k.length > 30);
-  const dnaChips = vibeKeywords.filter((k) => k.length <= 30);
-
-  const hasAnalysis = !!business.data?.positioning && business.data.positioning.length > 10;
+  const hasAnalysis = form.positioning.trim().length > 10 || (business.data?.positioning && business.data.positioning.length > 10);
   const isLoading = business.isLoading;
 
   return (
     <AppShell
-      title="Onboarding"
-      subtitle="Orbit learns your startup once, then markets it forever. Review and refine what was extracted from your website."
+      title="Brand Onboarding & Positioning"
+      subtitle="Define your startup DNA, craft an undeniable positioning line, and turn it into high-converting video hooks."
       actions={
-        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-          <Sparkles className="size-4" /> Save profile
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGeneratePositioning}
+            disabled={isGeneratingAI}
+            className="border-primary/30 hover:border-primary"
+          >
+            {isGeneratingAI ? <Loader2 className="mr-1.5 size-4 animate-spin text-primary" /> : <Sparkles className="mr-1.5 size-4 text-primary" />}
+            {isGeneratingAI ? "Generating…" : "AI Generate Positioning"}
+          </Button>
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="shadow-md">
+            {saveMutation.isPending ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <Check className="mr-1.5 size-4" />}
+            Save profile
+          </Button>
+        </div>
       }
     >
       <div className="space-y-6">
-        {/* Top row: intake form + AI summary */}
+        {/* Startup Presets Row */}
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card/60 p-3.5 shadow-sm">
+          <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1 mr-1">
+            <Sparkles className="size-3.5 text-primary" /> 1-Click Startup Presets:
+          </span>
+          {STARTUP_PRESETS.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => handlePreset(preset)}
+              className="text-xs font-medium rounded-full border border-border bg-secondary/70 px-3 py-1 text-foreground transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Top row: intake form + AI positioning editor */}
         <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[0.9fr_1.1fr]">
           {/* ── Left: editable intake form ──────────────────────────── */}
-          <Panel title="Brand intake" className="min-w-0">
+          <Panel title="Startup intake" className="min-w-0">
             <div className="grid gap-4">
-              <Field label="Business name">
+              <Field label="Startup name">
                 <Input
                   value={form.name}
-                  placeholder="e.g. Orbit"
+                  placeholder="e.g. Orbit, Acme AI"
                   onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))}
                 />
               </Field>
-              <Field label="Website">
-                <Input
-                  value={form.website}
-                  placeholder="https://yourwebsite.com"
-                  onChange={(e) => setForm((c) => ({ ...c, website: e.target.value }))}
-                />
+
+              <Field label="Website URL (paste to auto-scan)">
+                <div className="flex gap-2">
+                  <Input
+                    value={form.website}
+                    placeholder="https://yourwebsite.com"
+                    onChange={(e) => setForm((c) => ({ ...c, website: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleQuickScan();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleQuickScan}
+                    disabled={isScanningUrl || !form.website.trim()}
+                    className="shrink-0"
+                  >
+                    {isScanningUrl ? <Loader2 className="size-4 animate-spin" /> : <Globe className="size-4 mr-1.5 text-primary" />}
+                    {isScanningUrl ? "Scanning…" : "Scan URL"}
+                  </Button>
+                </div>
               </Field>
+
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Industry / Voice">
+                <Field label="Category / Industry">
                   <Input
                     value={form.industry}
-                    placeholder="e.g. SaaS – bold, direct"
+                    placeholder="e.g. Developer Tools, B2B SaaS"
                     onChange={(e) => setForm((c) => ({ ...c, industry: e.target.value }))}
                   />
                 </Field>
-                <Field label="Tone">
+                <Field label="Brand Voice / Tone">
                   <Input
                     value={form.tone}
-                    placeholder="e.g. sharp, warm, premium"
+                    placeholder="e.g. sharp, direct, high-energy"
                     onChange={(e) => setForm((c) => ({ ...c, tone: e.target.value }))}
                   />
                 </Field>
               </div>
-              <Field label="Ideal Customer (ICP)">
+
+              <Field label="Target Customer (ICP)">
                 <Input
                   value={form.audience}
-                  placeholder="e.g. founders, growth teams, solo operators"
+                  placeholder="e.g. seed founders, engineering leads, modern growth teams"
                   onChange={(e) => setForm((c) => ({ ...c, audience: e.target.value }))}
                 />
               </Field>
-              <Field label="Core Offer">
+
+              <Field label="Core Offer & Unfair Advantage">
                 <Textarea
                   value={form.offer}
-                  placeholder="What do you sell and why does it win?"
+                  placeholder="What problem do you solve, and what is your tangible outcome or guarantee?"
                   onChange={(e) => setForm((c) => ({ ...c, offer: e.target.value }))}
                   className="min-h-[88px]"
                 />
               </Field>
-              <p className="text-xs text-muted-foreground">
-                Go to{" "}
-                <a href="/scrape" className="font-semibold text-primary underline-offset-2 hover:underline">
-                  AI Scraper
-                </a>{" "}
-                to auto-fill this form from your website.
-              </p>
+
+              <div className="pt-2 flex items-center justify-between">
+                <Button
+                  type="button"
+                  onClick={handleGeneratePositioning}
+                  disabled={isGeneratingAI}
+                  className="w-full"
+                >
+                  {isGeneratingAI ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Sparkles className="size-4 mr-2" />}
+                  {isGeneratingAI ? "Analyzing & Generating Positioning…" : "Generate AI Positioning Statement"}
+                </Button>
+              </div>
             </div>
           </Panel>
 
-          {/* ── Right: AI positioning summary ───────────────────────── */}
-          <Panel title="AI brand positioning" className="sweep min-w-0">
+          {/* ── Right: AI brand positioning editor ───────────────────────── */}
+          <Panel
+            title="AI brand positioning & intelligence"
+            className="sweep min-w-0"
+            action={
+              <span className="flex items-center gap-1.5 rounded-full border border-signal/30 bg-signal/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-signal">
+                <span className="size-1.5 animate-pulse rounded-full bg-signal" /> Live Engine
+              </span>
+            }
+          >
             {isLoading ? (
-              <div className="flex h-40 items-center justify-center">
-                <span className="text-sm text-muted-foreground animate-pulse">Loading analysis…</span>
+              <div className="flex h-60 items-center justify-center">
+                <span className="text-sm text-muted-foreground animate-pulse">Loading brand intelligence…</span>
               </div>
-            ) : hasAnalysis ? (
+            ) : hasAnalysis || form.positioning ? (
               <div className="space-y-5">
-                {/* Positioning headline */}
-                <div>
-                  <p className="label-xs mb-2">Positioning statement</p>
-                  <p className="text-base font-medium leading-relaxed text-foreground">
-                    {business.data?.positioning}
-                  </p>
-                </div>
-
-                {/* ICP */}
-                {business.data?.audience && (
-                  <div className="rounded-xl border border-border bg-card p-4">
-                    <p className="label-xs mb-1">Ideal Customer Profile (ICP)</p>
-                    <p className="text-sm leading-relaxed text-foreground">{business.data.audience}</p>
-                  </div>
-                )}
-
-                {/* Core offer */}
-                {business.data?.offer && (
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                    <p className="label-xs mb-1 text-primary/80">Core Offer</p>
-                    <p className="text-sm leading-relaxed text-foreground">{business.data.offer}</p>
-                  </div>
-                )}
-
-                {/* DNA chips */}
-                {dnaChips.length > 0 && (
-                  <div>
-                    <p className="label-xs mb-2">Brand DNA</p>
-                    <div className="flex flex-wrap gap-2">
-                      {dnaChips.map((chip) => (
-                        <Chip key={chip}>{chip}</Chip>
-                      ))}
+                {/* Dedicated Interactive Positioning Statement Card */}
+                <div className="rounded-xl border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-card to-background p-4 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="label-xs text-primary font-bold uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="size-3 text-primary" /> Brand Positioning Statement
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyPositioning}
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        {copiedPositioning ? <Check className="size-3.5 text-signal mr-1" /> : <Copy className="size-3.5 mr-1" />}
+                        {copiedPositioning ? "Copied" : "Copy"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleGeneratePositioning}
+                        disabled={isGeneratingAI}
+                        className="h-7 px-2 text-xs text-primary hover:bg-primary/10"
+                      >
+                        {isGeneratingAI ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
+                        <span className="ml-1">Refine</span>
+                      </Button>
                     </div>
                   </div>
-                )}
+
+                  <Textarea
+                    value={form.positioning}
+                    onChange={(e) => setForm((c) => ({ ...c, positioning: e.target.value }))}
+                    placeholder="Enter or generate your core positioning statement…"
+                    className="min-h-[96px] text-base font-medium leading-relaxed bg-background/80 border-primary/20 focus-visible:ring-primary"
+                  />
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground pt-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="size-1.5 rounded-full bg-signal" />
+                      Clarity index: <strong className="text-foreground">Direct &amp; Outcome-Led</strong>
+                    </span>
+                    <span>{form.positioning.length} characters</span>
+                  </div>
+                </div>
+
+                {/* Tone Presets Chips */}
+                <div className="space-y-1.5">
+                  <p className="label-xs text-muted-foreground">Quick tone refiners:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["Bold & Direct", "Warm & Founder-Led", "Engineering-Grade", "High-Velocity", "Premium"].map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          setForm((c) => ({ ...c, tone: t.toLowerCase() }));
+                          toast.info(`Tone updated to "${t}". Click "Refine" to regenerate positioning.`);
+                        }}
+                        className="text-[11px] rounded-md border border-border bg-secondary/50 px-2.5 py-1 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ICP & Offer Highlights */}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-border bg-card p-3.5 shadow-sm">
+                    <p className="label-xs mb-1 text-muted-foreground">Target Buyer (ICP)</p>
+                    <p className="text-sm font-medium leading-relaxed text-foreground">
+                      {form.audience || "Founders & growth operators"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-primary/25 bg-primary/5 p-3.5 shadow-sm">
+                    <p className="label-xs mb-1 text-primary/80">Core Value Prop</p>
+                    <p className="text-sm font-medium leading-relaxed text-foreground">
+                      {form.offer ? form.offer.slice(0, 100) + (form.offer.length > 100 ? "…" : "") : "High-velocity pipeline engine"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* DNA Chips with Add/Remove */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="label-xs">Brand DNA Keywords</p>
+                    <span className="text-[10px] text-muted-foreground">Press Enter to add</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {dnaChips.map((chip) => (
+                      <span
+                        key={chip}
+                        className="group inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-mono text-xs font-medium text-primary shadow-sm"
+                      >
+                        {chip}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveChip(chip)}
+                          className="text-primary/50 hover:text-destructive text-xs leading-none"
+                          aria-label={`Remove ${chip}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                    <div className="inline-flex items-center">
+                      <Input
+                        value={newChipInput}
+                        onChange={(e) => setNewChipInput(e.target.value)}
+                        onKeyDown={handleAddChip}
+                        placeholder="+ add tag…"
+                        className="h-7 w-24 text-xs bg-background/50 rounded-full px-2.5"
+                      />
+                    </div>
+                  </div>
+                </div>
 
                 <SpeedLine />
               </div>
             ) : (
-              <div className="flex h-40 flex-col items-center justify-center gap-3 text-center">
-                <Sparkles className="size-7 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">
-                  No analysis yet. Scrape your website to populate this panel.
+              <div className="flex h-64 flex-col items-center justify-center gap-3 text-center p-6 border border-dashed border-border rounded-xl">
+                <Sparkles className="size-8 text-primary/60 animate-pulse" />
+                <h4 className="font-semibold text-foreground">Ready to analyze your brand</h4>
+                <p className="max-w-sm text-xs text-muted-foreground">
+                  Paste your startup URL on the left or select a preset above, then click Generate Positioning.
                 </p>
-                <Button asChild variant="outline" size="sm">
-                  <a href="/scrape">
-                    <Rocket className="mr-1.5 size-3.5" />
-                    Analyze website
-                  </a>
-                </Button>
+                <div className="flex flex-wrap gap-2 justify-center pt-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const orbitPreset = STARTUP_PRESETS[2];
+                      if (orbitPreset) handlePreset(orbitPreset);
+                    }}
+                    variant="outline"
+                  >
+                    Load Orbit Demo Preset
+                  </Button>
+                </div>
               </div>
             )}
           </Panel>
         </div>
 
         {/* Bottom row: Video angles + Qualifying questions */}
-        {hasAnalysis && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* ── Video angles ─────────────────────────────────────── */}
-            <Panel title="AI video angles" className="min-w-0">
-              {videoAngles.length > 0 ? (
-                <div className="space-y-3">
-                  {videoAngles.map((angle, i) => (
-                    <div
-                      key={i}
-                      className="flex gap-3 rounded-xl border border-border bg-card p-4 shadow-sm"
-                    >
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* ── Video angles ─────────────────────────────────────── */}
+          <Panel
+            title="AI short-form video hooks"
+            className="min-w-0"
+            action={
+              <span className="text-xs text-muted-foreground">
+                {videoAngles.length} hooks ready
+              </span>
+            }
+          >
+            {videoAngles.length > 0 ? (
+              <div className="space-y-3">
+                {videoAngles.map((angle, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/40"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
                       <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary">
                         {i + 1}
                       </span>
-                      <p className="text-sm leading-relaxed text-foreground">{angle}</p>
+                      <p className="text-sm font-medium leading-relaxed text-foreground">
+                        “{angle}”
+                      </p>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">
-                  Video angles will appear here after scraping your website.
-                </p>
-              )}
-            </Panel>
-
-            {/* ── Qualifying questions ─────────────────────────────── */}
-            <Panel title="AI qualifying questions" className="min-w-0">
-              {qualifyingQuestions.length > 0 ? (
-                <div className="space-y-3">
-                  {qualifyingQuestions.map((q, i) => (
-                    <div
-                      key={i}
-                      className="flex gap-3 rounded-xl border border-border bg-card p-4 shadow-sm"
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handlePushAngleToPipeline(angle, i)}
+                      className="shrink-0 text-xs gap-1.5 self-end sm:self-center"
                     >
-                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-signal/15 font-mono text-xs font-bold text-signal">
-                        Q{i + 1}
-                      </span>
-                      <p className="text-sm leading-relaxed text-foreground">{q}</p>
-                    </div>
-                  ))}
-                  <p className="text-xs text-muted-foreground pt-1">
-                    Orbit uses these to automatically qualify every inbound DM before it reaches you.
-                  </p>
+                      <Rocket className="size-3.5 text-primary" />
+                      Push to pipeline
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-sm text-muted-foreground italic">
+                Generate brand positioning above or scan your website to see 3 high-converting video angles.
+              </div>
+            )}
+          </Panel>
+
+          {/* ── Qualifying questions ─────────────────────────────── */}
+          <Panel
+            title="Inbound DM qualifying questions"
+            className="min-w-0"
+            action={
+              <span className="text-xs text-signal font-semibold">
+                Autonomous triage
+              </span>
+            }
+          >
+            {qualifyingQuestions.length > 0 ? (
+              <div className="space-y-3">
+                {qualifyingQuestions.map((q, i) => (
+                  <div
+                    key={i}
+                    className="flex gap-3 rounded-xl border border-border bg-card p-4 shadow-sm"
+                  >
+                    <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-signal/15 font-mono text-xs font-bold text-signal">
+                      Q{i + 1}
+                    </span>
+                    <p className="text-sm leading-relaxed text-foreground">{q}</p>
+                  </div>
+                ))}
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-foreground/80 flex items-start gap-2 mt-2">
+                  <Bot className="size-4 shrink-0 text-primary mt-0.5" />
+                  <span>
+                    Orbit asks these exact questions when an inbound DM arrives, scores the buyer’s budget and timeline, and routes qualified leads directly to your cockpit.
+                  </span>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">
-                  Qualifying questions will appear here after scraping your website.
-                </p>
-              )}
-            </Panel>
-          </div>
-        )}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-sm text-muted-foreground italic">
+                Qualifying questions will appear here once your brand profile is generated.
+              </div>
+            )}
+          </Panel>
+        </div>
 
         {/* Analyzed-at badge */}
         {business.data?.analyzed_at && (
           <p className="text-right text-xs text-muted-foreground">
-            Last analyzed:{" "}
+            Last analyzed &amp; synced:{" "}
             <span className="font-semibold text-foreground">
               {new Date(business.data.analyzed_at).toLocaleString()}
             </span>
@@ -618,7 +1125,6 @@ export function OnboardingPage() {
   );
 }
 
-
 export function ContentPage() {
   const queryClient = useQueryClient();
   const business = useQuery({ queryKey: ["business"], queryFn: fetchBusiness });
@@ -626,6 +1132,7 @@ export function ContentPage() {
   const shoots = useQuery({ queryKey: ["shoot-requests"], queryFn: fetchShootRequests });
   const [aiForm, setAiForm] = useState({ title: "Founder morning rush hook", pattern: "hook_problem_proof", notes: "Make the first three seconds feel urgent." });
   const [shootForm, setShootForm] = useState({ title: "Cafe workflow shoot", brief: "Capture grinding, packing, founder talking head, and customer handoff.", location: "Bengaluru", preferredDate: "" });
+  const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null);
 
   const aiMutation = useMutation({
     mutationFn: () => createContentItem({ ...aiForm, path: "ai" }, business.data),
@@ -635,6 +1142,7 @@ export function ContentPage() {
     },
     onError: () => toast.error("Could not create draft"),
   });
+
   const shootMutation = useMutation({
     mutationFn: () => createShootRequest(shootForm),
     onSuccess: () => {
@@ -642,6 +1150,26 @@ export function ContentPage() {
       toast.success("Offline shoot requested");
     },
     onError: () => toast.error("Could not request shoot"),
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => updateContentItemStatus(id, status),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ["content-items"] });
+      if (selectedItem?.id === updated.id) setSelectedItem(updated);
+      toast.success(`Moved to ${humanize(updated.status)}`);
+    },
+    onError: () => toast.error("Could not update stage"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteContentItem(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["content-items"] });
+      setSelectedItem(null);
+      toast.success("Content item removed");
+    },
+    onError: () => toast.error("Could not delete item"),
   });
 
   return (
@@ -686,15 +1214,28 @@ export function ContentPage() {
                     </div>
                     <div className="space-y-3">
                       {items.map((item) => (
-                        <div key={item.id} className="rounded-sm border border-border bg-card p-3">
+                        <div
+                          key={item.id}
+                          onClick={() => setSelectedItem(item)}
+                          className="rounded-lg border border-border bg-card p-3 cursor-pointer transition-all hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5"
+                        >
                           <div className="flex items-center justify-between gap-2">
                             <Chip className="capitalize">{item.path}</Chip>
                             {item.path === "ai" ? <Bot className="size-4 text-cool" /> : <Clapperboard className="size-4 text-heat" />}
                           </div>
-                          <h3 className="mt-3 text-sm font-semibold">{item.title}</h3>
-                          <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{item.hook ?? item.notes ?? item.caption}</p>
+                          <h3 className="mt-2.5 text-sm font-semibold leading-tight text-foreground">{item.title}</h3>
+                          <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">{item.hook ?? item.notes ?? item.caption}</p>
+                          <div className="mt-2.5 flex items-center justify-between border-t border-border/50 pt-2 text-[10px] text-muted-foreground">
+                            <span>{item.pattern ? humanize(item.pattern) : "Standard"}</span>
+                            <span className="font-semibold text-primary">View details →</span>
+                          </div>
                         </div>
                       ))}
+                      {items.length === 0 && (
+                        <div className="py-6 text-center text-xs text-muted-foreground/60 italic">
+                          Empty
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -719,7 +1260,7 @@ export function ContentPage() {
                 <Field label="Creative brief">
                   <Textarea value={aiForm.notes} onChange={(event) => setAiForm((current) => ({ ...current, notes: event.target.value }))} />
                 </Field>
-                <Button className="w-full" onClick={() => aiMutation.mutate()} disabled={aiMutation.isPending}><Sparkles className="size-4" /> Generate ready draft</Button>
+                <Button className="w-full" onClick={() => aiMutation.mutate()} disabled={aiMutation.isPending}><Sparkles className="size-4 mr-2" /> Generate ready draft</Button>
               </div>
             </Panel>
 
@@ -735,7 +1276,7 @@ export function ContentPage() {
                   <Field label="Location"><Input value={shootForm.location} onChange={(event) => setShootForm((current) => ({ ...current, location: event.target.value }))} /></Field>
                   <Field label="Date"><Input type="date" value={shootForm.preferredDate} onChange={(event) => setShootForm((current) => ({ ...current, preferredDate: event.target.value }))} /></Field>
                 </div>
-                <Button variant="secondary" className="w-full" onClick={() => shootMutation.mutate()} disabled={shootMutation.isPending}><Clapperboard className="size-4" /> Request VasuDev MarketX</Button>
+                <Button variant="secondary" className="w-full" onClick={() => shootMutation.mutate()} disabled={shootMutation.isPending}><Clapperboard className="size-4 mr-2" /> Request VasuDev MarketX</Button>
               </div>
             </Panel>
           </div>
@@ -760,6 +1301,102 @@ export function ContentPage() {
           </div>
         </Panel>
       </div>
+
+      {/* Content Item Detail Dialog */}
+      <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-2 mb-1">
+              <Chip className="capitalize">{selectedItem?.path}</Chip>
+              <StatusPill status={selectedItem?.status ?? "idea"} />
+            </div>
+            <DialogTitle className="text-xl font-bold">{selectedItem?.title}</DialogTitle>
+            <DialogDescription>
+              Pattern: {selectedItem?.pattern ? humanize(selectedItem.pattern) : "General short video"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {selectedItem?.hook && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3.5">
+                <p className="label-xs text-primary mb-1">First 3-Second Hook</p>
+                <p className="text-sm font-semibold text-foreground leading-relaxed">
+                  “{selectedItem.hook}”
+                </p>
+              </div>
+            )}
+
+            {selectedItem?.script && (
+              <div className="rounded-lg border border-border bg-card p-3.5 space-y-1">
+                <p className="label-xs text-muted-foreground mb-1.5">Beat-by-Beat Script</p>
+                <p className="text-xs leading-relaxed font-mono whitespace-pre-wrap text-foreground/90">
+                  {selectedItem.script}
+                </p>
+              </div>
+            )}
+
+            {selectedItem?.caption && (
+              <div className="rounded-lg border border-border bg-secondary/40 p-3">
+                <p className="label-xs text-muted-foreground mb-1">Platform Caption</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {selectedItem.caption}
+                </p>
+              </div>
+            )}
+
+            {selectedItem?.hashtags && selectedItem.hashtags.length > 0 && (
+              <div>
+                <p className="label-xs text-muted-foreground mb-1.5">Hashtags</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedItem.hashtags.map((tag) => (
+                    <span key={tag} className="text-[11px] rounded bg-secondary px-2 py-0.5 text-muted-foreground">
+                      {tag.startsWith("#") ? tag : `#${tag}`}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Stage Selector */}
+            <div className="border-t border-border pt-4">
+              <p className="label-xs mb-2">Advance Stage</p>
+              <div className="flex flex-wrap gap-1.5">
+                {CONTENT_STAGES.map((s) => (
+                  <Button
+                    key={s.key}
+                    size="sm"
+                    variant={selectedItem?.status === s.key ? "default" : "outline"}
+                    className="text-xs h-8"
+                    disabled={updateStatusMutation.isPending || selectedItem?.status === s.key}
+                    onClick={() => selectedItem && updateStatusMutation.mutate({ id: selectedItem.id, status: s.key })}
+                  >
+                    {s.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => selectedItem && deleteMutation.mutate(selectedItem.id)}
+              disabled={deleteMutation.isPending}
+            >
+              <Trash2 className="size-3.5 mr-1" /> Delete
+            </Button>
+            <div className="flex gap-2">
+              <Button asChild size="sm" variant="secondary">
+                <a href="/distribution">Schedule boost →</a>
+              </Button>
+              <Button size="sm" onClick={() => setSelectedItem(null)}>
+                Close
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
@@ -1163,6 +1800,12 @@ export function SettingsPage() {
   const business = useQuery({ queryKey: ["business"], queryFn: fetchBusiness });
   const [replyTone, setReplyTone] = useState(business.data?.auto_reply_tone ?? "fast, friendly, founder-direct");
   const [template, setTemplate] = useState(business.data?.auto_reply_template ?? "Thanks for reaching out — I can help. What launch timeline, budget band, and expected lead volume should I plan around?");
+
+  useEffect(() => {
+    if (business.data?.auto_reply_tone) setReplyTone(business.data.auto_reply_tone);
+    if (business.data?.auto_reply_template) setTemplate(business.data.auto_reply_template);
+  }, [business.data]);
+
   const saveMutation = useMutation({
     mutationFn: async () => saveBrandProfile({
       name: business.data?.name ?? "Orbit Demo",
@@ -1170,13 +1813,26 @@ export function SettingsPage() {
       industry: business.data?.industry ?? "",
       audience: business.data?.audience ?? "",
       offer: business.data?.offer ?? "",
-      tone: replyTone,
+      tone: business.data?.tone ?? "direct",
+      positioning: business.data?.positioning ?? "",
+      autoReplyTone: replyTone,
+      autoReplyTemplate: template,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["business"] });
-      toast.success("Settings saved");
+      toast.success("Settings & operating rules saved");
     },
     onError: () => toast.error("Could not save settings"),
+  });
+
+  const toggleChannelMutation = useMutation({
+    mutationFn: (patch: { instagram?: boolean; facebook?: boolean; whatsapp?: boolean }) =>
+      updateBusinessChannels(patch),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["business"] });
+      toast.success("Channel connection updated");
+    },
+    onError: () => toast.error("Could not update channel"),
   });
 
   return (
@@ -1185,19 +1841,45 @@ export function SettingsPage() {
         <Panel title="Connected channels">
           <div className="grid gap-3">
             {[
-              { label: "Instagram DM", active: business.data?.instagram_connected, icon: Inbox },
-              { label: "WhatsApp", active: business.data?.whatsapp_connected, icon: MessageCircle },
-              { label: "Facebook", active: business.data?.facebook_connected, icon: Megaphone },
+              {
+                id: "instagram" as const,
+                label: "Instagram DM",
+                active: business.data?.instagram_connected,
+                icon: Inbox,
+              },
+              {
+                id: "whatsapp" as const,
+                label: "WhatsApp",
+                active: business.data?.whatsapp_connected,
+                icon: MessageCircle,
+              },
+              {
+                id: "facebook" as const,
+                label: "Facebook Messenger",
+                active: business.data?.facebook_connected,
+                icon: Megaphone,
+              },
             ].map((channel) => (
               <div key={channel.label} className="flex items-center justify-between gap-3 rounded-md border border-border bg-secondary/40 p-4">
                 <div className="flex items-center gap-3">
                   <span className="grid size-10 place-items-center rounded-sm bg-primary/15 text-primary"><channel.icon className="size-4" /></span>
                   <div>
                     <p className="font-semibold">{channel.label}</p>
-                    <p className="text-xs text-muted-foreground">{channel.active ? "Connection healthy" : "Manual demo mode"}</p>
+                    <p className="text-xs text-muted-foreground">{channel.active ? "Connection live & active" : "Manual demo mode"}</p>
                   </div>
                 </div>
-                <StatusPill status={channel.active ? "live" : "demo"} />
+                <div className="flex items-center gap-2">
+                  <StatusPill status={channel.active ? "live" : "demo"} />
+                  <Button
+                    size="sm"
+                    variant={channel.active ? "outline" : "secondary"}
+                    className="text-xs h-7 px-2.5"
+                    disabled={toggleChannelMutation.isPending}
+                    onClick={() => toggleChannelMutation.mutate({ [channel.id]: !channel.active })}
+                  >
+                    {channel.active ? "Disconnect" : "Connect"}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -1206,12 +1888,12 @@ export function SettingsPage() {
         <Panel title="Auto-reply control">
           <div className="space-y-4">
             <Field label="Reply tone"><Input value={replyTone} onChange={(event) => setReplyTone(event.target.value)} /></Field>
-            <Field label="Template"><Textarea value={template} onChange={(event) => setTemplate(event.target.value)} className="min-h-32" /></Field>
+            <Field label="Template"><Textarea value={template} onChange={(event) => setTemplate(event.target.value)} className="min-h-32 font-mono text-xs leading-relaxed" /></Field>
             <div className="rounded-md border border-border bg-secondary/40 p-4">
               <p className="label-xs">Founder handoff rule</p>
               <p className="mt-2 text-sm text-muted-foreground">High-tier leads go straight to the founder queue. Medium-tier leads receive two more qualifying questions. Low-tier leads stay automated unless they re-engage.</p>
             </div>
-            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}><Settings2 className="size-4" /> Save operating rules</Button>
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}><Settings2 className="size-4 mr-2" /> Save operating rules</Button>
           </div>
         </Panel>
       </div>
