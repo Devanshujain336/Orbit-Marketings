@@ -675,7 +675,7 @@ export function ContentPage() {
 
         <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
           <Panel title="Pipeline board" bodyClassName="p-3 overflow-hidden">
-            <div className="flex gap-3 overflow-x-auto pb-4 snap-x xl:grid xl:grid-cols-5 xl:overflow-visible xl:pb-0 xl:snap-none">
+            <div className="flex items-start gap-3 overflow-x-auto pb-4 snap-x xl:grid xl:grid-cols-5 xl:items-stretch xl:overflow-visible xl:pb-0 xl:snap-none">
               {CONTENT_STAGES.map((stage) => {
                 const items = (content.data ?? []).filter((item) => item.status === stage.key);
                 return (
