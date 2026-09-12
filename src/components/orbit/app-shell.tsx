@@ -89,10 +89,13 @@ export function AppShell({
           <header className="sticky top-0 z-20 border-b border-border bg-background/85 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
               <div className="min-w-0">
-                <div className="flex items-center gap-2 lg:hidden">
+                <Link
+                  to="/"
+                  className="flex items-center gap-2 transition-opacity hover:opacity-70 active:opacity-50 lg:hidden"
+                >
                   <OrbitLogoMark size={20} className="shrink-0 text-primary" />
                   <span className="font-display text-xs font-bold tracking-[0.18em] uppercase">Orbit</span>
-                </div>
+                </Link>
                 <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-foreground sm:mt-0 sm:text-3xl">
                   {title}
                 </h1>
