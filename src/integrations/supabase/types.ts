@@ -80,6 +80,172 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_posts: {
+        Row: {
+          business_id: string
+          campaign_id: string
+          caption: string | null
+          content_item_id: string | null
+          created_at: string
+          day_offset: number
+          format: string
+          hashtags: string[]
+          headline: string | null
+          hook: string
+          id: string
+          pattern: string | null
+          platform: string
+          position: number
+          schedule_id: string | null
+          script: string | null
+          status: string
+          updated_at: string
+          visual_prompt: string | null
+          visual_style: string | null
+          visual_url: string | null
+        }
+        Insert: {
+          business_id: string
+          campaign_id: string
+          caption?: string | null
+          content_item_id?: string | null
+          created_at?: string
+          day_offset?: number
+          format?: string
+          hashtags?: string[]
+          headline?: string | null
+          hook: string
+          id?: string
+          pattern?: string | null
+          platform?: string
+          position?: number
+          schedule_id?: string | null
+          script?: string | null
+          status?: string
+          updated_at?: string
+          visual_prompt?: string | null
+          visual_style?: string | null
+          visual_url?: string | null
+        }
+        Update: {
+          business_id?: string
+          campaign_id?: string
+          caption?: string | null
+          content_item_id?: string | null
+          created_at?: string
+          day_offset?: number
+          format?: string
+          hashtags?: string[]
+          headline?: string | null
+          hook?: string
+          id?: string
+          pattern?: string | null
+          platform?: string
+          position?: number
+          schedule_id?: string | null
+          script?: string | null
+          status?: string
+          updated_at?: string
+          visual_prompt?: string | null
+          visual_style?: string | null
+          visual_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_posts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_posts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_posts_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_posts_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          audience: string | null
+          big_idea: string | null
+          brand_voice: string | null
+          business_id: string
+          channel_mix: Json
+          created_at: string
+          duration_days: number
+          id: string
+          name: string
+          objective: string | null
+          palette: Json
+          source: string
+          source_url: string | null
+          status: string
+          updated_at: string
+          vibe_keywords: string[]
+        }
+        Insert: {
+          audience?: string | null
+          big_idea?: string | null
+          brand_voice?: string | null
+          business_id: string
+          channel_mix?: Json
+          created_at?: string
+          duration_days?: number
+          id?: string
+          name: string
+          objective?: string | null
+          palette?: Json
+          source?: string
+          source_url?: string | null
+          status?: string
+          updated_at?: string
+          vibe_keywords?: string[]
+        }
+        Update: {
+          audience?: string | null
+          big_idea?: string | null
+          brand_voice?: string | null
+          business_id?: string
+          channel_mix?: Json
+          created_at?: string
+          duration_days?: number
+          id?: string
+          name?: string
+          objective?: string | null
+          palette?: Json
+          source?: string
+          source_url?: string | null
+          status?: string
+          updated_at?: string
+          vibe_keywords?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_items: {
         Row: {
           business_id: string
