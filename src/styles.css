@@ -1,0 +1,339 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Orbit — "Fastlane" design system.
+ * Motorsport telemetry: asphalt/carbon surfaces, hot signal accent,
+ * speed lines, mono numerals. Dark-first: :root IS the dark theme.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 3px);
+  --radius-md: calc(var(--radius) - 1px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-signal: var(--signal);
+  --color-signal-foreground: var(--signal-foreground);
+  --color-heat: var(--heat);
+  --color-heat-foreground: var(--heat-foreground);
+  --color-cool: var(--cool);
+  --color-carbon: var(--carbon);
+  --color-asphalt: var(--asphalt);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-display: "EB Garamond", Georgia, serif;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --shadow-telemetry: 0 0 0 1px var(--border), 0 24px 60px -30px oklch(0 0 0 / 0.9);
+  --shadow-glow: 0 0 32px -6px oklch(0.86 0.22 122 / 0.45);
+}
+
+:root {
+  /* Wispr Flow — Cream Ivory + Coral Pulse + Deep Charcoal */
+  --radius: 0.5rem;
+
+  /* Core surfaces */
+  --background:  oklch(0.99 0.025 102);   /* Cream Ivory #FFFFEB */
+  --foreground:  oklch(0.17 0.005 270);   /* Deep Charcoal #1A1A1A */
+  --asphalt:     oklch(0.97 0.015 102);   /* slightly deeper cream for subtle zones */
+  --carbon:      oklch(0.95 0.018 102);   /* deeper still, for grid/dividers */
+
+  /* Cards — pure clean white so they lift off the cream page */
+  --card:            oklch(1 0 0);
+  --card-foreground: oklch(0.17 0.005 270);
+
+  /* Popovers */
+  --popover:            oklch(1 0 0);
+  --popover-foreground: oklch(0.17 0.005 270);
+
+  /* Primary = Coral Pulse #FF6C4C */
+  --primary:            oklch(0.66 0.19 31);
+  --primary-foreground: oklch(1 0 0);
+
+  /* Signal = same coral (hot lead, CTA) */
+  --signal:            oklch(0.66 0.19 31);
+  --signal-foreground: oklch(1 0 0);
+
+  /* Heat = warm amber (boost, schedule) */
+  --heat:            oklch(0.76 0.14 58);
+  --heat-foreground: oklch(0.17 0.005 270);
+
+  /* Cool = muted periwinkle (informational) */
+  --cool: oklch(0.68 0.12 258);
+
+  /* Secondary — soft warm neutral (replaces the jarring lavender-pink) */
+  --secondary:            oklch(0.96 0.012 102);
+  --secondary-foreground: oklch(0.17 0.005 270);
+
+  /* Muted */
+  --muted:            oklch(0.96 0.012 102);
+  --muted-foreground: oklch(0.48 0.025 35);
+
+  /* Accent — very light coral wash for hover states */
+  --accent:            oklch(0.96 0.04 31);
+  --accent-foreground: oklch(0.35 0.1 31);
+
+  /* Destructive */
+  --destructive:            oklch(0.58 0.22 22);
+  --destructive-foreground: oklch(1 0 0);
+
+  /* Borders & inputs */
+  --border: oklch(0.17 0 0 / 10%);
+  --input:  oklch(0.17 0 0 / 12%);
+  --ring:   oklch(0.66 0.19 31 / 50%);
+
+  /* Charts */
+  --chart-1: oklch(0.66 0.19 31);
+  --chart-2: oklch(0.76 0.14 58);
+  --chart-3: oklch(0.68 0.12 258);
+  --chart-4: oklch(0.58 0.22 22);
+  --chart-5: oklch(0.62 0.08 185);
+
+  /* Sidebar — just a hair darker than the page cream */
+  --sidebar:                    oklch(0.97 0.02 102);
+  --sidebar-foreground:         oklch(0.17 0.005 270);
+  --sidebar-primary:            oklch(0.66 0.19 31);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent:             oklch(0.94 0.03 31);
+  --sidebar-accent-foreground:  oklch(0.35 0.1 31);
+  --sidebar-border:             oklch(0.17 0 0 / 8%);
+  --sidebar-ring:               oklch(0.66 0.19 31 / 50%);
+}
+
+.dark {
+  color-scheme: light;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: 0;
+  }
+}
+
+
+
+@keyframes marketing-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -8px, 0); }
+}
+
+@keyframes marketing-dash {
+  to { stroke-dashoffset: -80; }
+}
+
+.marketing-float {
+  animation: marketing-float 5s ease-in-out infinite;
+}
+
+.marketing-dash {
+  animation: marketing-dash 12s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-float,
+  .marketing-dash {
+    animation: none;
+  }
+}
+
+@utility label-xs {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+@utility grid-asphalt {
+  background-image:
+    linear-gradient(to right, oklch(0.17 0 0 / 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.17 0 0 / 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+@utility speed-line {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-signal) 35%,
+    var(--color-heat) 65%,
+    transparent
+  );
+}
+
+@utility panel {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 2px 0 oklch(0.17 0 0 / 0.05);
+}
+
+@utility panel-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.panel-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -8px oklch(0.17 0 0 / 0.12);
+}
+
+@keyframes orbit-sweep {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(210%);
+  }
+}
+
+@utility sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sweep::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.07), transparent);
+    animation: orbit-sweep 3.4s linear infinite;
+  }
+}
+
+@keyframes orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-spin-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes orbit-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.86 0.22 122 / 0.28);
+  }
+  50% {
+    box-shadow: 0 0 34px 6px oklch(0.86 0.22 122 / 0.16);
+  }
+}
+
+.orbit-path {
+  border: 1px dashed oklch(1 0 0 / 0.12);
+}
+
+.orbit-rotate {
+  animation: orbit-spin 30s linear infinite;
+}
+
+.orbit-counter {
+  animation: orbit-spin-reverse 30s linear infinite;
+}
+
+.orbit-pulse {
+  animation: orbit-breathe 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-rotate,
+  .orbit-counter,
+  .orbit-pulse {
+    animation: none;
+  }
+}
+
+/* ─── Orbit System — elliptical diagram ────────────────────────────────── */
+
+@keyframes orbit-counter {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes nucleus-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 24px 6px oklch(0.7 0.22 30 / 0.30),
+      0 0 60px 12px oklch(0.7 0.22 30 / 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 48px 12px oklch(0.7 0.22 30 / 0.55),
+      0 0 90px 24px oklch(0.7 0.22 30 / 0.22);
+  }
+}
+
+.nucleus-pulse {
+  animation: nucleus-glow 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nucleus-pulse { animation: none; }
+}
+
+
