@@ -296,6 +296,89 @@ Extract verified factual JSON now:`;
 }
 
 /**
+ * Call Groq API to extract verified factual details from the product page
+ */
+async function callGroqExtractor(
+  pageText: string,
+  productName: string,
+  rawApiKey: string
+): Promise<{
+  description?: string;
+  features?: string[];
+  specifications?: string[];
+  materialsOrIngredients?: string[];
+  explicitClaims?: string[];
+} | null> {
+  const apiKey = rawApiKey.trim().replace(/^["']|["']$/g, "").trim();
+  const models = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"];
+
+  const systemPrompt = `You are Orbit's Product Fact Extraction & Verification Engine.
+Your task is to extract ONLY explicitly stated factual product details from the scraped single product page text.
+
+CRITICAL ZERO-HALLUCINATION RULES:
+1. ONLY extract details that are explicitly written on this product page.
+2. DO NOT invent, assume, extrapolate, or guess any features, specifications, materials, ingredients, or claims.
+3. If ingredients or materials are not explicitly stated, return an empty array: [].
+4. If specifications (measurements, dimensions, technical specs, weight, volume, sizing, care instructions) are not mentioned, return an empty array: [].
+5. If bulleted features are not mentioned, return an empty array: [].
+6. For 'explicitClaims', ONLY include verifiable guarantees, certifications, or factual claims explicitly printed on the page.
+7. Return strict minified JSON conforming to:
+{
+  "description": "explicitly stated product description or empty string",
+  "features": ["array of explicitly listed feature bullets"],
+  "specifications": ["array of explicitly stated specs, measurements, sizing, or technical metrics"],
+  "materialsOrIngredients": ["array of explicitly stated ingredients, fabric breakdown, or materials"],
+  "explicitClaims": ["array of explicitly stated certifications, dietary claims, guarantees, or factual claims"]
+}`;
+
+  const userPrompt = `Target Product Name: ${productName}
+
+Scraped Product Page Content:
+${pageText.slice(0, 16000)}
+
+Extract verified factual JSON now:`;
+
+  for (const model of models) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.1,
+        }),
+      });
+
+      if (!res.ok) continue;
+
+      const json = (await res.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+
+      const rawText = json.choices?.[0]?.message?.content ?? "";
+      const cleaned = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const start = cleaned.indexOf("{");
+      const end = cleaned.lastIndexOf("}");
+      if (start !== -1 && end !== -1) {
+        return JSON.parse(cleaned.slice(start, end + 1));
+      }
+    } catch (err) {
+      console.warn(`Groq product extraction error with ${model}:`, err);
+    }
+  }
+
+  return null;
+}
+
+/**
  * Main function: Fetches an individual product page URL via Firecrawl (or fallback)
  * and extracts factual description, features, specifications, materials/ingredients, and claims.
  */
@@ -369,8 +452,9 @@ export async function fetchAndExtractProductDetails(
     return unverified;
   }
 
-  // 3. Extract verified product attributes using Gemini (with deterministic fallback)
+  // 3. Extract verified product attributes using Gemini (or Groq fallback)
   const geminiKey = process.env["GEMINI_API_KEY"];
+  const groqKey = process.env["GROQ_API_KEY"];
   let verifiedDetails: VerifiedProductDetails | null = null;
 
   if (geminiKey && geminiKey.trim().length > 8 && geminiKey !== "YOUR_GEMINI_API_KEY") {
@@ -378,6 +462,30 @@ export async function fetchAndExtractProductDetails(
       pageData.markdown || pageData.html || "",
       basicProduct?.name || pageData.title || "Product",
       geminiKey
+    );
+
+    if (aiExtracted) {
+      verifiedDetails = {
+        url: canonicalUrl,
+        fetchedSuccessfully: true,
+        productName: basicProduct?.name || pageData.title,
+        description: (aiExtracted.description && aiExtracted.description.trim().length > 0)
+          ? aiExtracted.description.trim()
+          : (pageData.description || basicProduct?.description || ""),
+        features: filterOutPlaceholderFeatures(toStringArray(aiExtracted.features)),
+        specifications: toStringArray(aiExtracted.specifications),
+        materialsOrIngredients: toStringArray(aiExtracted.materialsOrIngredients),
+        explicitClaims: toStringArray(aiExtracted.explicitClaims),
+      };
+    }
+  }
+
+  // Fallback to Groq if Gemini failed or was unconfigured
+  if (!verifiedDetails && groqKey && groqKey.trim().length > 8 && groqKey !== "YOUR_GROQ_API_KEY") {
+    const aiExtracted = await callGroqExtractor(
+      pageData.markdown || pageData.html || "",
+      basicProduct?.name || pageData.title || "Product",
+      groqKey
     );
 
     if (aiExtracted) {

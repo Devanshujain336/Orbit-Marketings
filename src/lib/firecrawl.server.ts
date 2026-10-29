@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Server-only Firecrawl crawler and scraper for Orbit.
  * Extracts brand info, prioritized subpages (shop, products, about, faq),
  * and clean visual assets (products, logos, lifestyle imagery) while filtering tracking pixels and UI icons.
@@ -670,7 +670,7 @@ export async function crawlBrandWebsite(rawUrl: string): Promise<ScrapedBrandBun
   // Include discovered products summary for Gemini
   if (finalDiscoveredProducts.length > 0) {
     combinedContent += `--- EXTRACTED STORE PRODUCTS (${finalDiscoveredProducts.length} items) ---\n`;
-    finalDiscoveredProducts.slice(0, 25).forEach((p, idx) => {
+    finalDiscoveredProducts.slice(0, 40).forEach((p, idx) => {
       combinedContent += `Item #${idx + 1}: ${p.name} | Category: ${p.category} | Price: ${p.currency || ""}${p.price || "N/A"} | URL: ${p.url}\n`;
       if (p.image_urls.length > 0) combinedContent += `  Image: ${p.image_urls[0]}\n`;
     });
@@ -680,7 +680,7 @@ export async function crawlBrandWebsite(rawUrl: string): Promise<ScrapedBrandBun
   pages.forEach((p, idx) => {
     combinedContent += `--- PAGE ${idx + 1}: ${p.url} (${p.title}) ---\n`;
     if (p.description) combinedContent += `Description: ${p.description}\n`;
-    combinedContent += `${p.markdown.slice(0, 4500)}\n\n`;
+    combinedContent += `${p.markdown.slice(0, 8000)}\n\n`;
   });
 
   return {
@@ -693,10 +693,11 @@ export async function crawlBrandWebsite(rawUrl: string): Promise<ScrapedBrandBun
     logo,
     ogImage,
     pages,
-    allImages: Array.from(allImagesSet).slice(0, 30),
+    allImages: Array.from(allImagesSet).slice(0, 50),
     socialLinks,
-    combinedContent: combinedContent.slice(0, 30000),
+    combinedContent: combinedContent.slice(0, 60000),
     usedFirecrawl,
     discoveredProducts: finalDiscoveredProducts,
   };
 }
+

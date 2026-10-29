@@ -38,7 +38,7 @@ export type AdvertisingConcept = {
   themeTitle: string;
   productName: string;
   brandName: string;
-  source: "gemini" | "grounded-fallback";
+  source: "gemini" | "groq" | "grounded-fallback";
   selectedDirection?: CreativeDirection | undefined;
   verifiedProductDetails?: {
     fetched: boolean;
@@ -134,6 +134,78 @@ async function callGemini(systemPrompt: string, userPrompt: string, apiKey: stri
   }
 
   return null;
+}
+
+/**
+ * Call Groq API when Gemini API fails
+ */
+async function callGroq(systemPrompt: string, userPrompt: string, rawApiKey: string): Promise<Record<string, unknown> | null> {
+  const apiKey = rawApiKey.trim().replace(/^["']|["']$/g, "").trim();
+  const models = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"];
+
+  for (const model of models) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: `${systemPrompt}\n\nStrict JSON response only:` },
+            { role: "user", content: userPrompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.3,
+        }),
+      });
+
+      if (!res.ok) continue;
+
+      const json = (await res.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+
+      const rawText = json.choices?.[0]?.message?.content ?? "";
+      const cleaned = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const start = cleaned.indexOf("{");
+      const end = cleaned.lastIndexOf("}");
+      if (start !== -1 && end !== -1) {
+        return JSON.parse(cleaned.slice(start, end + 1)) as Record<string, unknown>;
+      }
+    } catch (err) {
+      console.warn(`Groq concept generation error on ${model}:`, err);
+    }
+  }
+
+  return null;
+}
+
+async function callAiWithFallback(systemPrompt: string, userPrompt: string): Promise<{ data: Record<string, unknown> | null; source: "gemini" | "groq" }> {
+  const geminiKey = (process.env["GEMINI_API_KEY"] || "").trim().replace(/^["']|["']$/g, "").trim();
+  const groqKey = (process.env["GROQ_API_KEY"] || "").trim().replace(/^["']|["']$/g, "").trim();
+
+  if (geminiKey && geminiKey !== "YOUR_GEMINI_API_KEY" && geminiKey.length > 8) {
+    try {
+      const res = await callGemini(systemPrompt, userPrompt, geminiKey);
+      if (res) return { data: res, source: "gemini" };
+    } catch (err) {
+      console.warn("Gemini concept generation failed:", err);
+    }
+  }
+
+  if (groqKey && groqKey !== "YOUR_GROQ_API_KEY" && groqKey.length > 8) {
+    try {
+      const res = await callGroq(systemPrompt, userPrompt, groqKey);
+      if (res) return { data: res, source: "groq" };
+    } catch (err) {
+      console.warn("Groq concept generation failed:", err);
+    }
+  }
+
+  return { data: null, source: "gemini" };
 }
 
 /**
@@ -474,24 +546,22 @@ Selected Creative Theme:
 
 Generate exactly 3 genuinely distinct creative directions now in JSON:`;
 
-  if (apiKey && apiKey !== "YOUR_GEMINI_API_KEY") {
-    const rawAi = await callGemini(systemPrompt, userPrompt, apiKey);
-    if (rawAi && Array.isArray(rawAi["directions"]) && rawAi["directions"].length > 0) {
-      const parsed: CreativeDirection[] = (rawAi["directions"] as Record<string, unknown>[]).slice(0, 3).map((d, idx) => ({
-        id: String(d["id"] || `direction-${idx + 1}`),
-        title: String(d["title"] || `Creative Direction ${idx + 1}`),
-        coreIdea: String(d["coreIdea"] || ""),
-        targetAudienceOrSituation: String(d["targetAudienceOrSituation"] || ""),
-        hook: String(d["hook"] || ""),
-        creativeRationale: String(d["creativeRationale"] || ""),
-        relevantProductFacts: Array.isArray(d["relevantProductFacts"])
-          ? (d["relevantProductFacts"] as unknown[]).map(String)
-          : [],
-      }));
+  const { data: rawAi } = await callAiWithFallback(systemPrompt, userPrompt);
+  if (rawAi && Array.isArray(rawAi["directions"]) && rawAi["directions"].length > 0) {
+    const parsed: CreativeDirection[] = (rawAi["directions"] as Record<string, unknown>[]).slice(0, 3).map((d, idx) => ({
+      id: String(d["id"] || `direction-${idx + 1}`),
+      title: String(d["title"] || `Creative Direction ${idx + 1}`),
+      coreIdea: String(d["coreIdea"] || ""),
+      targetAudienceOrSituation: String(d["targetAudienceOrSituation"] || ""),
+      hook: String(d["hook"] || ""),
+      creativeRationale: String(d["creativeRationale"] || ""),
+      relevantProductFacts: Array.isArray(d["relevantProductFacts"])
+        ? (d["relevantProductFacts"] as unknown[]).map(String)
+        : [],
+    }));
 
-      if (parsed.length >= 3) {
-        return parsed;
-      }
+    if (parsed.length >= 3) {
+      return parsed;
     }
   }
 
@@ -612,34 +682,32 @@ Generate the complete advertising concept JSON with 4 distinct storyboard scenes
       }
     : undefined;
 
-  if (apiKey && apiKey !== "YOUR_GEMINI_API_KEY") {
-    const rawAi = await callGemini(systemPrompt, userPrompt, apiKey);
-    if (rawAi && rawAi["campaignIdea"] && Array.isArray(rawAi["storyboard"])) {
-      const rawScenes = rawAi["storyboard"] as Record<string, unknown>[];
-      const parsedScenes: StoryboardScene[] = rawScenes.map((s, idx) => ({
-        sceneNumber: typeof s["sceneNumber"] === "number" ? s["sceneNumber"] : idx + 1,
-        timestamp: String(s["timestamp"] || `Scene ${idx + 1}`),
-        purpose: String(s["purpose"] || "Advances the narrative"),
-        visualDescription: String(s["visualDescription"] || "Product visual in action"),
-        voiceoverOrDialogue: String(s["voiceoverOrDialogue"] || s["voiceover"] || s["dialogue"] || ""),
-        onScreenText: String(s["onScreenText"] || ""),
-      }));
+  const { data: rawAi, source: aiSource } = await callAiWithFallback(systemPrompt, userPrompt);
+  if (rawAi && rawAi["campaignIdea"] && Array.isArray(rawAi["storyboard"])) {
+    const rawScenes = rawAi["storyboard"] as Record<string, unknown>[];
+    const parsedScenes: StoryboardScene[] = rawScenes.map((s, idx) => ({
+      sceneNumber: typeof s["sceneNumber"] === "number" ? s["sceneNumber"] : idx + 1,
+      timestamp: String(s["timestamp"] || `Scene ${idx + 1}`),
+      purpose: String(s["purpose"] || "Advances the narrative"),
+      visualDescription: String(s["visualDescription"] || "Product visual in action"),
+      voiceoverOrDialogue: String(s["voiceoverOrDialogue"] || s["voiceover"] || s["dialogue"] || ""),
+      onScreenText: String(s["onScreenText"] || ""),
+    }));
 
-      return {
-        campaignIdea: String(rawAi["campaignIdea"]),
-        hook: String(rawAi["hook"] || selectedDirection?.hook || "Discover something new."),
-        storyboard: parsedScenes,
-        callToAction: String(rawAi["callToAction"] || `Shop ${product.name} today.`),
-        duration: typeof rawAi["duration"] === "number" ? rawAi["duration"] : duration,
-        themeId,
-        themeTitle,
-        productName: product.name,
-        brandName: brand.brand_name,
-        source: "gemini",
-        selectedDirection: selectedDirection ?? undefined,
-        verifiedProductDetails: attachedVerifiedDetails,
-      };
-    }
+    return {
+      campaignIdea: String(rawAi["campaignIdea"]),
+      hook: String(rawAi["hook"] || selectedDirection?.hook || "Discover something new."),
+      storyboard: parsedScenes,
+      callToAction: String(rawAi["callToAction"] || `Shop ${product.name} today.`),
+      duration: typeof rawAi["duration"] === "number" ? rawAi["duration"] : duration,
+      themeId,
+      themeTitle,
+      productName: product.name,
+      brandName: brand.brand_name,
+      source: aiSource,
+      selectedDirection: selectedDirection ?? undefined,
+      verifiedProductDetails: attachedVerifiedDetails,
+    };
   }
 
   // Fallback to grounded structure

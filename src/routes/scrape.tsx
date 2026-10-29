@@ -782,7 +782,7 @@ function ScrapePage() {
                     <div>
                       <h3 className="text-sm font-semibold">Brand Brain Activated</h3>
                       <p className="text-[11px] text-muted-foreground">
-                        {brain._meta?.usedFirecrawl ? "Firecrawl Scrape + Gemini" : "Direct Scrape + Gemini"} · Step 1 Complete
+                        {brain._meta?.usedFirecrawl ? "Firecrawl Scrape" : "Direct Scrape"} + {brain._meta?.source === "groq" ? "Groq AI" : brain._meta?.source === "gemini" ? "Gemini AI" : "AI Engine"} · Step 1 Complete
                       </p>
                     </div>
                   </div>

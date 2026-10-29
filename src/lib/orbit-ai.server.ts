@@ -4,6 +4,7 @@ const LOVABLE_MODEL = "google/gemini-2.5-flash";
 async function callModel(system: string, user: string): Promise<Record<string, unknown> | null> {
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const geminiKey = process.env["GEMINI_API_KEY"];
+  const groqKey = process.env["GROQ_API_KEY"];
 
   // 1. Try Lovable AI Gateway if configured
   if (lovableKey) {
@@ -69,6 +70,43 @@ async function callModel(system: string, user: string): Promise<Record<string, u
       }
     } catch (err) {
       console.warn("Direct Gemini API call failed:", err);
+    }
+  }
+
+  // 3. Try Groq API fallback
+  if (groqKey && groqKey !== "YOUR_GROQ_API_KEY" && groqKey.trim().length > 8) {
+    const models = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"];
+    for (const model of models) {
+      try {
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${groqKey.trim().replace(/^["']|["']$/g, "")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: `${system}\nStrict JSON response only:` },
+              { role: "user", content: user },
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.2,
+          }),
+        });
+        if (res.ok) {
+          const payload = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+          const raw = payload.choices?.[0]?.message?.content ?? "";
+          const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+          const start = cleaned.indexOf("{");
+          const end = cleaned.lastIndexOf("}");
+          if (start !== -1 && end !== -1) {
+            return JSON.parse(cleaned.slice(start, end + 1)) as Record<string, unknown>;
+          }
+        }
+      } catch (err) {
+        console.warn(`[OrbitAI] Groq fallback failed with model ${model}:`, err);
+      }
     }
   }
 
